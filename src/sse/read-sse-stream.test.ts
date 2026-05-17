@@ -34,6 +34,22 @@ describe("readSSEStream", () => {
     expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
   })
 
+  it("parses bare carriage-return framed SSE events", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("event: token\rdata: {\"delta\":\"hi\"}\r\r"))
+        controller.close()
+      },
+    })
+
+    const events = []
+    for await (const event of readSSEStream(stream)) {
+      events.push(event)
+    }
+
+    expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
+  })
+
   it("preserves meaningful whitespace in field values", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -54,6 +70,22 @@ describe("readSSEStream", () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(new TextEncoder().encode("event: token\ndata: {\"delta\":\"hi\"}"))
+        controller.close()
+      },
+    })
+
+    const events = []
+    for await (const event of readSSEStream(stream)) {
+      events.push(event)
+    }
+
+    expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
+  })
+
+  it("skips comment-only heartbeat chunks", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(": keepalive\n\nevent: token\ndata: {\"delta\":\"hi\"}\n\n"))
         controller.close()
       },
     })

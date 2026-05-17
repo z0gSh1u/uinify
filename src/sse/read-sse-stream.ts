@@ -15,26 +15,43 @@ export async function* readSSEStream(
     }
 
     buffer += decoder.decode(value, { stream: true })
-    buffer = buffer.replaceAll("\r\n", "\n")
+    buffer = normalizeLineEndings(buffer)
 
     const chunks = buffer.split("\n\n")
     buffer = chunks.pop() ?? ""
 
     for (const chunk of chunks) {
-      yield parseEventChunk(chunk)
+      const event = parseEventChunk(chunk)
+
+      if (event) {
+        yield event
+      }
     }
   }
 
   buffer += decoder.decode()
-  buffer = buffer.replaceAll("\r\n", "\n")
+  buffer = normalizeLineEndings(buffer)
 
   if (buffer.trim().length > 0) {
-    yield parseEventChunk(buffer)
+    const event = parseEventChunk(buffer)
+
+    if (event) {
+      yield event
+    }
   }
 }
 
-function parseEventChunk(chunk: string): UiSSEEvent {
+function normalizeLineEndings(value: string) {
+  return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n")
+}
+
+function parseEventChunk(chunk: string): UiSSEEvent | null {
   const lines = chunk.split("\n")
+
+  if (lines.every((line) => line.startsWith(":") || line.length === 0)) {
+    return null
+  }
+
   const event = lines.find((line) => line.startsWith("event:"))?.slice(6).replace(/^ /, "") ?? "message"
   const data = lines
     .filter((line) => line.startsWith("data:"))

@@ -122,7 +122,7 @@ describe("MessagePart", () => {
     expect(screen.getByText("Plain text artifact preview")).toBeInTheDocument()
   })
 
-  it("uses renderer overrides for reasoning, tool calls, and artifacts", () => {
+  it("uses renderer overrides for reasoning, tool calls, and code artifacts only", () => {
     const renderReasoning = vi.fn(() => <div>Custom reasoning</div>)
     const renderToolCall = vi.fn(() => <div>Custom tool call</div>)
     const renderArtifactCode = vi.fn(() => <div>Custom artifact</div>)
@@ -144,6 +144,16 @@ describe("MessagePart", () => {
       },
       {
         id: "artifact-2",
+        kind: "artifact",
+        artifact: {
+          id: "artifact-code-2",
+          kind: "code",
+          language: "ts",
+          content: "const value = 2",
+        },
+      },
+      {
+        id: "artifact-3",
         kind: "artifact",
         artifact: {
           id: "artifact-text-1",
@@ -170,10 +180,35 @@ describe("MessagePart", () => {
     expect(screen.getByText("Custom reasoning")).toBeInTheDocument()
     expect(screen.getByText("Custom tool call")).toBeInTheDocument()
     expect(screen.getByText("Custom artifact")).toBeInTheDocument()
+    expect(screen.getByText("Plain text artifact")).toBeInTheDocument()
     expect(renderReasoning).toHaveBeenCalledTimes(1)
     expect(renderToolCall).toHaveBeenCalledTimes(1)
     expect(renderArtifactCode).toHaveBeenCalledTimes(1)
     expect(renderArtifactCode).toHaveBeenCalledWith({ part: parts[2] })
+  })
+
+  it("does not apply renderArtifactCode to text artifacts", () => {
+    const renderArtifactCode = vi.fn(() => <div>Custom artifact</div>)
+
+    render(
+      <RenderersProvider value={{ renderArtifactCode }}>
+        <MessagePart
+          part={{
+            id: "artifact-text-only",
+            kind: "artifact",
+            artifact: {
+              id: "artifact-text-only-1",
+              kind: "text",
+              content: "Plain text artifact preview",
+            },
+          }}
+        />
+      </RenderersProvider>,
+    )
+
+    expect(renderArtifactCode).not.toHaveBeenCalled()
+    expect(screen.queryByText("Custom artifact")).not.toBeInTheDocument()
+    expect(screen.getByText("Plain text artifact preview")).toBeInTheDocument()
   })
 
   it("preserves stable part slots when renderer overrides are used", () => {

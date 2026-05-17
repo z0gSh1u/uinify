@@ -52,8 +52,6 @@ export function LexicalComposer({
   const editorRef = useRef<LexicalEditor | null>(null)
   const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
   const [attachments, setAttachments] = useState(initialAttachments)
-  const [selectedCommands, setSelectedCommands] = useState<string[]>([])
-  const [selectedMentions, setSelectedMentions] = useState<string[]>([])
   const [activeToken, setActiveToken] = useState("")
   const attachmentHandlers = useMemo(
     () => createAttachmentHandlers((items) => setAttachments((current) => [...current, ...items])),
@@ -164,12 +162,6 @@ export function LexicalComposer({
   }
 
   const insertChoice = (choice: UiComposerChoice) => {
-    if (choice.insertText.startsWith("/")) {
-      setSelectedCommands((current) => [...current, choice.id])
-    } else if (choice.insertText.startsWith("@")) {
-      setSelectedMentions((current) => [...current, choice.id])
-    }
-
     const nextText = updateEditorToken(choice.insertText)
 
     if (nextText !== null) {
@@ -183,8 +175,6 @@ export function LexicalComposer({
   const resetComposer = () => {
     setText("")
     setAttachments([])
-    setSelectedCommands([])
-    setSelectedMentions([])
     editorRef.current?.update(() => {
       const root = $getRoot()
       root.clear()
@@ -254,11 +244,17 @@ export function LexicalComposer({
 
       <button
         onClick={() => {
+          const { commands: submitCommands, mentions: submitMentions } = deriveSubmitMetadata(
+            text,
+            slashCommands,
+            mentions,
+          )
+
           onSubmit({
             text,
             attachments,
-            commands: selectedCommands,
-            mentions: selectedMentions,
+            commands: submitCommands,
+            mentions: submitMentions,
           })
           resetComposer()
         }}
@@ -393,6 +389,39 @@ function findFallbackRange(text: string, token: string): ActiveTokenRange | null
     start: tokenIndex,
     end: tokenIndex + token.length,
   }
+}
+
+function deriveSubmitMetadata(text: string, slashCommands: UiComposerChoice[], mentions: UiComposerChoice[]) {
+  return {
+    commands: deriveChoiceIdsFromText(text, slashCommands),
+    mentions: deriveChoiceIdsFromText(text, mentions),
+  }
+}
+
+function deriveChoiceIdsFromText(text: string, items: UiComposerChoice[]) {
+  const choicesByToken = new Map<string, string[]>()
+
+  for (const item of items) {
+    const token = readChoiceToken(item)
+
+    if (!token) {
+      continue
+    }
+
+    choicesByToken.set(token, [...(choicesByToken.get(token) ?? []), item.id])
+  }
+
+  if (choicesByToken.size === 0) {
+    return []
+  }
+
+  const matches = text.match(/(?:^|\s)([\/@]\S*)/g) ?? []
+
+  return matches.flatMap((match) => choicesByToken.get(match.trim()) ?? [])
+}
+
+function readChoiceToken(choice: UiComposerChoice) {
+  return choice.insertText.trim().match(/^[\/@]\S*/)?.[0] ?? null
 }
 
 function EditorRefPlugin({ onReady }: { onReady: (editor: LexicalEditor) => void }) {

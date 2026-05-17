@@ -47,7 +47,11 @@ export function MessagePart({ part }: MessagePartProps) {
       return (
         <div data-kind={part.artifact.kind} data-slot="message-part" data-state="complete" data-type="artifact">
           <div data-kind={part.artifact.kind} data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}>
-            {renderers.renderArtifactCode ? <>{renderers.renderArtifactCode({ part })}</> : <ArtifactCodeBlock part={part} />}
+            {part.artifact.kind === "code" && renderers.renderArtifactCode ? (
+              <>{renderers.renderArtifactCode({ part })}</>
+            ) : (
+              <ArtifactCodeBlock part={part} />
+            )}
           </div>
         </div>
       )

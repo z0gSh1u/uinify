@@ -157,4 +157,73 @@ describe("LexicalComposer", () => {
       mentions: ["worker"],
     })
   })
+
+  it("derives commands and mentions from the final text snapshot on submit", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        onSubmit={onSubmit}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/ag")
+    await user.click(await screen.findByRole("button", { name: "agent" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/agent ")
+    })
+
+    setEditorText(textbox, "manual /agent @worker")
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "manual /agent @worker",
+      attachments: [],
+      commands: ["agent"],
+      mentions: ["worker"],
+    })
+  })
+
+  it("does not submit stale command or mention ids after the final text changes", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        onSubmit={onSubmit}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/ag")
+    await user.click(await screen.findByRole("button", { name: "agent" }))
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/agent ")
+    })
+
+    setEditorText(textbox, "/agent @wo")
+    await user.click(await screen.findByRole("button", { name: "worker" }))
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/agent @worker ")
+    })
+
+    setEditorText(textbox, "manual /age @workerish")
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "manual /age @workerish",
+      attachments: [],
+      commands: [],
+      mentions: [],
+    })
+  })
 })
