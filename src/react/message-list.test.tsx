@@ -88,9 +88,13 @@ describe("MessageList", () => {
   })
 
   it("does not require ChatRoot when messages are passed", () => {
-    render(<MessageList messages={[demoMessages[0]!]} />)
+    const { rerender } = render(<MessageList messages={[demoMessages[0]!]} />)
 
     expect(screen.getByText("Hello")).toBeInTheDocument()
+
+    rerender(<MessageList messages={[demoMessages[1]!]} />)
+
+    expect(screen.getByText("World")).toBeInTheDocument()
   })
 
   it("falls back when a message render crashes", () => {
@@ -125,36 +129,30 @@ describe("MessageList", () => {
     expect(screen.getByText("Message failed to render")).toBeInTheDocument()
   })
 
-  it("recovers from a prior row render failure when that row input changes", () => {
+  it("recovers from a prior row render failure when renderer input changes", () => {
     const runtime = createChatRuntime({ conversationId: "demo" })
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const messages: UiMessage[] = [
+      {
+        id: "m1",
+        role: "assistant",
+        state: "complete",
+        feedback: "none",
+        parts: [{ id: "p1", kind: "reasoning", text: "safe", state: "complete" }],
+      },
+    ]
 
     const { rerender } = render(
       <ChatRoot
         runtime={runtime}
         renderers={{
           renderReasoning: ({ part }) => {
-            if (part.text === "unsafe") {
-              throw new Error("boom")
-            }
-
-            return <div>{part.text}</div>
+            throw new Error(part.text)
           },
         }}
       >
-        <MessageList
-          messages={[
-            {
-              id: "m1",
-              role: "assistant",
-              state: "complete",
-              feedback: "none",
-              parts: [
-                { id: "p1", kind: "reasoning", text: "unsafe", state: "complete" },
-              ],
-            },
-          ]}
-        />
+        <MessageList messages={messages} />
       </ChatRoot>,
     )
 
@@ -167,17 +165,7 @@ describe("MessageList", () => {
           renderReasoning: ({ part }) => <div>{part.text}</div>,
         }}
       >
-        <MessageList
-          messages={[
-            {
-              id: "m1",
-              role: "assistant",
-              state: "complete",
-              feedback: "none",
-              parts: [{ id: "p1", kind: "reasoning", text: "safe", state: "complete" }],
-            },
-          ]}
-        />
+        <MessageList messages={messages} />
       </ChatRoot>,
     )
 
