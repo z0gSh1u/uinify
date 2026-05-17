@@ -18,11 +18,15 @@ export function ChatRoot({ children, runtime, renderers }: ChatRootProps) {
 }
 
 export function useChatRuntime() {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useOptionalChatRuntime()
 
   if (!runtime) {
     throw new Error("useChatRuntime must be used inside ChatRoot")
   }
 
   return runtime
+}
+
+export function useOptionalChatRuntime() {
+  return useContext(RuntimeContext)
 }
