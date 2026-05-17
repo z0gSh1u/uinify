@@ -52,6 +52,8 @@ export function LexicalComposer({
   const editorRef = useRef<LexicalEditor | null>(null)
   const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
   const [attachments, setAttachments] = useState(initialAttachments)
+  const [selectedCommands, setSelectedCommands] = useState<string[]>([])
+  const [selectedMentions, setSelectedMentions] = useState<string[]>([])
   const [activeToken, setActiveToken] = useState("")
   const attachmentHandlers = useMemo(
     () => createAttachmentHandlers((items) => setAttachments((current) => [...current, ...items])),
@@ -162,6 +164,12 @@ export function LexicalComposer({
   }
 
   const insertChoice = (choice: UiComposerChoice) => {
+    if (choice.insertText.startsWith("/")) {
+      setSelectedCommands((current) => [...current, choice.id])
+    } else if (choice.insertText.startsWith("@")) {
+      setSelectedMentions((current) => [...current, choice.id])
+    }
+
     const nextText = updateEditorToken(choice.insertText)
 
     if (nextText !== null) {
@@ -175,6 +183,8 @@ export function LexicalComposer({
   const resetComposer = () => {
     setText("")
     setAttachments([])
+    setSelectedCommands([])
+    setSelectedMentions([])
     editorRef.current?.update(() => {
       const root = $getRoot()
       root.clear()
@@ -244,7 +254,12 @@ export function LexicalComposer({
 
       <button
         onClick={() => {
-          onSubmit({ text, attachments, commands: [], mentions: [] })
+          onSubmit({
+            text,
+            attachments,
+            commands: selectedCommands,
+            mentions: selectedMentions,
+          })
           resetComposer()
         }}
         type="button"

@@ -18,14 +18,27 @@ function setEditorText(element: HTMLElement, text: string) {
   act(() => {
     editor?.update(() => {
       const root = $getRoot()
+      const textNode = $createTextNode(text)
       root.clear()
-      root.append($createParagraphNode().append($createTextNode(text)))
+      root.append($createParagraphNode().append(textNode))
+      textNode.select(text.length, text.length)
     })
   })
 }
 
 function getEditor(element: HTMLElement) {
   return (element as HTMLElement & { __lexicalEditor?: LexicalEditor }).__lexicalEditor
+}
+
+function getEditorText(element: HTMLElement) {
+  let text = ""
+  const editor = getEditor(element)
+
+  editor?.getEditorState().read(() => {
+    text = $getRoot().getTextContent()
+  })
+
+  return text
 }
 
 describe("LexicalComposer", () => {
@@ -102,6 +115,46 @@ describe("LexicalComposer", () => {
 
     await waitFor(() => {
       expect(textbox).toHaveTextContent("")
+    })
+  })
+
+  it("submits selected slash commands and mentions", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        onSubmit={onSubmit}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/ag")
+
+    await user.click(await screen.findByRole("button", { name: "agent" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/agent ")
+    })
+
+    setEditorText(textbox, "/agent @wo")
+
+    await user.click(await screen.findByRole("button", { name: "worker" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/agent @worker ")
+    })
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "/agent @worker ",
+      attachments: [],
+      commands: ["agent"],
+      mentions: ["worker"],
     })
   })
 })

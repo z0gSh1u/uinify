@@ -3,3 +3,8 @@ export * from "./runtime/events"
 export * from "./runtime/apply-stream-event"
 export * from "./runtime/create-chat-runtime"
 export * from "./runtime/use-chat-session"
+export type {
+  UiComposerAttachment,
+  UiComposerChoice,
+  UiComposerValue,
+} from "./composer/contracts"

@@ -1,4 +1,9 @@
 export { LexicalComposer, type LexicalComposerProps } from "./lexical-composer"
+export type {
+  UiComposerAttachment,
+  UiComposerChoice,
+  UiComposerValue,
+} from "../contracts"
 export {
   collectAttachments,
   createAttachmentHandlers,

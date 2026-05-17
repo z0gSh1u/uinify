@@ -49,4 +49,20 @@ describe("readSSEStream", () => {
 
     expect(events).toEqual([{ event: " token ", data: "  keep trailing  " }])
   })
+
+  it("flushes the final buffered event when the stream ends without a trailing blank line", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("event: token\ndata: {\"delta\":\"hi\"}"))
+        controller.close()
+      },
+    })
+
+    const events = []
+    for await (const event of readSSEStream(stream)) {
+      events.push(event)
+    }
+
+    expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
+  })
 })
