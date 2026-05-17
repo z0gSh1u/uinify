@@ -6,7 +6,7 @@ export type ToolCallBlockProps = {
 
 export function ToolCallBlock({ part }: ToolCallBlockProps) {
   return (
-    <section data-slot="toolcall" data-state={part.status}>
+    <section>
       <header>
         <strong>{part.toolName}</strong>
         <span>{part.status}</span>

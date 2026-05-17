@@ -30,19 +30,25 @@ export function MessagePart({ part }: MessagePartProps) {
     case "reasoning":
       return (
         <div data-slot="message-part" data-state={part.state} data-type="reasoning">
-          {renderers.renderReasoning ? <>{renderers.renderReasoning({ part })}</> : <ReasoningBlock part={part} />}
+          <div data-slot="reasoning" data-state={part.state}>
+            {renderers.renderReasoning ? <>{renderers.renderReasoning({ part })}</> : <ReasoningBlock part={part} />}
+          </div>
         </div>
       )
     case "tool-call":
       return (
         <div data-slot="message-part" data-state={part.status} data-type="tool-call">
-          {renderers.renderToolCall ? <>{renderers.renderToolCall({ part })}</> : <ToolCallBlock part={part} />}
+          <div data-slot="toolcall" data-state={part.status}>
+            {renderers.renderToolCall ? <>{renderers.renderToolCall({ part })}</> : <ToolCallBlock part={part} />}
+          </div>
         </div>
       )
     case "artifact":
       return (
         <div data-kind={part.artifact.kind} data-slot="message-part" data-state="complete" data-type="artifact">
-          {renderers.renderArtifactCode ? <>{renderers.renderArtifactCode({ part })}</> : <ArtifactCodeBlock part={part} />}
+          <div data-kind={part.artifact.kind} data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}>
+            {renderers.renderArtifactCode ? <>{renderers.renderArtifactCode({ part })}</> : <ArtifactCodeBlock part={part} />}
+          </div>
         </div>
       )
     default: {

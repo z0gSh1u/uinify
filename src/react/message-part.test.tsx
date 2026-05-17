@@ -175,4 +175,53 @@ describe("MessagePart", () => {
     expect(renderArtifactCode).toHaveBeenCalledTimes(1)
     expect(renderArtifactCode).toHaveBeenCalledWith({ part: parts[2] })
   })
+
+  it("preserves stable part slots when renderer overrides are used", () => {
+    render(
+      <RenderersProvider
+        value={{
+          renderReasoning: () => <div>Custom reasoning</div>,
+          renderToolCall: () => <div>Custom tool call</div>,
+          renderArtifactCode: () => <div>Custom artifact</div>,
+        }}
+      >
+        <>
+          <MessagePart
+            part={{
+              id: "reasoning-override",
+              kind: "reasoning",
+              text: "Internal chain",
+              state: "streaming",
+            }}
+          />
+          <MessagePart
+            part={{
+              id: "tool-override",
+              kind: "tool-call",
+              toolName: "lookupDocs",
+              status: "running",
+              inputSummary: null,
+              outputSummary: null,
+            }}
+          />
+          <MessagePart
+            part={{
+              id: "artifact-override",
+              kind: "artifact",
+              artifact: {
+                id: "artifact-code-override",
+                kind: "code",
+                language: "ts",
+                content: "const custom = true",
+              },
+            }}
+          />
+        </>
+      </RenderersProvider>,
+    )
+
+    expect(screen.getByText("Custom reasoning").closest('[data-slot="reasoning"]')).toBeTruthy()
+    expect(screen.getByText("Custom tool call").closest('[data-slot="toolcall"]')).toBeTruthy()
+    expect(screen.getByText("Custom artifact").closest('[data-slot="artifact-code"]')).toBeTruthy()
+  })
 })

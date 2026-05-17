@@ -7,10 +7,9 @@ export type ArtifactCodeBlockProps = {
 export function ArtifactCodeBlock({ part }: ArtifactCodeBlockProps) {
   const { artifact } = part
   const label = artifact.kind === "code" ? artifact.language ?? "code" : "text"
-  const slot = artifact.kind === "code" ? "artifact-code" : "artifact-text"
 
   return (
-    <section data-kind={artifact.kind} data-slot={slot}>
+    <section>
       <header>{label}</header>
       <div>
         <pre>

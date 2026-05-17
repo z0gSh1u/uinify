@@ -9,7 +9,7 @@ export function ReasoningBlock({ part }: ReasoningBlockProps) {
   const [open, setOpen] = useState(false)
 
   return (
-    <section data-slot="reasoning" data-state={part.state}>
+    <section>
       <button
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
