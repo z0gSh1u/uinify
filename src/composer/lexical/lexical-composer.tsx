@@ -11,6 +11,7 @@ import {
   $getRoot,
   $getSelection,
   $isRangeSelection,
+  $isTextNode,
   CLEAR_HISTORY_COMMAND,
   type LexicalEditor,
 } from "lexical"
@@ -74,6 +75,82 @@ export function LexicalComposer({
     return `${prefix}${insertText}${normalizedSuffix}`
   }
 
+  const updateEditorToken = (insertText: string) => {
+    let nextText: string | null = null
+
+    editorRef.current?.update(() => {
+      const selection = $getSelection()
+
+      if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") {
+        return
+      }
+
+      const anchorNode = selection.anchor.getNode()
+
+      if (!$isTextNode(anchorNode)) {
+        return
+      }
+
+      const parent = anchorNode.getParent()
+      const root = $getRoot()
+
+      if (!parent || parent.getParent() !== root) {
+        return
+      }
+
+      const paragraphText = parent.getTextContent()
+      let paragraphTextOffset = 0
+
+      for (const sibling of parent.getChildren()) {
+        if (sibling.getKey() === anchorNode.getKey()) {
+          paragraphTextOffset += selection.anchor.offset
+          break
+        }
+
+        paragraphTextOffset += sibling.getTextContentSize()
+      }
+
+      const tokenStart = paragraphText.slice(0, paragraphTextOffset).search(/(?:^|\s)[\/@]\S*$/)
+
+      if (tokenStart === -1) {
+        return
+      }
+
+      const prefix = paragraphText[tokenStart]
+      const actualStart = prefix === "/" || prefix === "@" ? tokenStart : tokenStart + 1
+      let actualEnd = paragraphTextOffset
+
+      while (actualEnd < paragraphText.length && !/\s/.test(paragraphText[actualEnd] ?? "")) {
+        actualEnd += 1
+      }
+
+      const nextToken = paragraphText.slice(actualStart, actualEnd)
+
+      if (!nextToken.startsWith("/") && !nextToken.startsWith("@")) {
+        return
+      }
+
+      const nextParagraphText =
+        paragraphText.slice(0, actualStart) +
+        insertText +
+        (insertText.endsWith(" ") && /^\s/.test(paragraphText.slice(actualEnd))
+          ? paragraphText.slice(actualEnd).replace(/^\s+/, "")
+          : paragraphText.slice(actualEnd))
+
+      parent.clear()
+      parent.append($createTextNode(nextParagraphText))
+      const lastChild = parent.getLastChild()
+
+      if ($isTextNode(lastChild)) {
+        lastChild.select(actualStart + insertText.length, actualStart + insertText.length)
+      }
+
+      nextText = root.getTextContent()
+    })
+
+    return nextText
+  }
+
   const setEditorText = (nextText: string) => {
     setText(nextText)
     editorRef.current?.update(() => {
@@ -84,6 +161,13 @@ export function LexicalComposer({
   }
 
   const insertChoice = (choice: UiComposerChoice) => {
+    const nextText = updateEditorToken(choice.insertText)
+
+    if (nextText !== null) {
+      setText(nextText)
+      return
+    }
+
     setEditorText(replaceActiveToken(choice.insertText))
   }
 
@@ -189,46 +273,62 @@ function readActiveTokenState(editor: LexicalEditor | null): ActiveTokenState {
 
     const anchorNode = selection.anchor.getNode()
     const parent = anchorNode.getParent()
+    const root = $getRoot()
 
-    if (!parent) {
+    if (!parent || parent.getParent() !== root) {
       return
     }
 
-    const siblings = parent.getChildren()
-    let absoluteOffset = 0
+    const paragraphIndex = parent.getIndexWithinParent()
+    let paragraphTextOffset = 0
 
-    for (const sibling of siblings) {
+    for (const sibling of parent.getChildren()) {
       if (sibling.getKey() === anchorNode.getKey()) {
-        absoluteOffset += selection.anchor.offset
+        paragraphTextOffset += selection.anchor.offset
         break
       }
 
-      absoluteOffset += sibling.getTextContentSize()
+      paragraphTextOffset += sibling.getTextContentSize()
     }
 
-    const fullText = parent.getTextContent()
-    const tokenStart = fullText.slice(0, absoluteOffset).search(/(?:^|\s)[\/@]\S*$/)
+    const paragraphText = parent.getTextContent()
+    const tokenStart = paragraphText.slice(0, paragraphTextOffset).search(/(?:^|\s)[\/@]\S*$/)
 
     if (tokenStart === -1) {
       return
     }
 
-    const prefix = fullText[tokenStart]
+    const prefix = paragraphText[tokenStart]
     const actualStart = prefix === "/" || prefix === "@" ? tokenStart : tokenStart + 1
-    let actualEnd = absoluteOffset
+    let actualEnd = paragraphTextOffset
 
-    while (actualEnd < fullText.length && !/\s/.test(fullText[actualEnd] ?? "")) {
+    while (actualEnd < paragraphText.length && !/\s/.test(paragraphText[actualEnd] ?? "")) {
       actualEnd += 1
     }
 
-    const nextToken = fullText.slice(actualStart, actualEnd)
+    const nextToken = paragraphText.slice(actualStart, actualEnd)
 
     if (!nextToken.startsWith("/") && !nextToken.startsWith("@")) {
       return
     }
 
+    let documentOffset = 0
+
+    for (let index = 0; index < paragraphIndex; index += 1) {
+      const previousParagraph = root.getChildAtIndex(index)
+
+      if (!previousParagraph) {
+        break
+      }
+
+      documentOffset += previousParagraph.getTextContentSize() + 1
+    }
+
     token = nextToken
-    range = { start: actualStart, end: actualEnd }
+    range = {
+      start: documentOffset + actualStart,
+      end: documentOffset + actualEnd,
+    }
   })
 
   return { token, range }

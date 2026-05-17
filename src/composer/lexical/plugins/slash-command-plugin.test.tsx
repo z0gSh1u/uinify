@@ -47,6 +47,33 @@ function setEditorTextWithCaret(element: HTMLElement, text: string, caretOffset:
   })
 }
 
+function setEditorParagraphsWithCaret(
+  element: HTMLElement,
+  paragraphs: readonly string[],
+  paragraphIndex: number,
+  caretOffset: number,
+) {
+  const editor = getEditor(element)
+
+  expect(editor).toBeDefined()
+
+  act(() => {
+    editor?.update(() => {
+      const root = $getRoot()
+      root.clear()
+
+      paragraphs.forEach((paragraphText, index) => {
+        const textNode = $createTextNode(paragraphText)
+        root.append($createParagraphNode().append(textNode))
+
+        if (index === paragraphIndex) {
+          textNode.select(caretOffset, caretOffset)
+        }
+      })
+    })
+  })
+}
+
 describe("SlashCommandPlugin", () => {
   it("filters slash items when the token starts with a slash", async () => {
     const user = userEvent.setup()
@@ -122,6 +149,31 @@ describe("SlashCommandPlugin", () => {
 
     await waitFor(() => {
       expect(getEditorText(textbox)).toBe("Prefix /agent middle")
+    })
+  })
+
+  it("replaces the slash token in the active paragraph for multi-paragraph content", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <LexicalComposer
+        onSubmit={() => undefined}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorParagraphsWithCaret(textbox, ["First line", "Second /ag line"], 1, 10)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "agent" })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "agent" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("First line\n\nSecond /agent line")
     })
   })
 })
