@@ -55,27 +55,27 @@
   min-width: 0;
 }
 
-[data-slot="message-part"][data-type="reasoning"] {
+[data-slot="reasoning"] {
   padding: var(--uinify-space-3);
   background: var(--uinify-color-reasoning-bg);
   border: 1px solid var(--uinify-color-reasoning-border);
   border-radius: var(--uinify-radius-sm);
 }
 
-[data-slot="message-part"][data-type="tool-call"] {
+[data-slot="toolcall"] {
   padding: var(--uinify-space-3);
   background: var(--uinify-color-toolcall-bg);
   border: 1px solid var(--uinify-color-toolcall-border);
   border-radius: var(--uinify-radius-sm);
 }
 
-[data-slot="message-part"][data-type="artifact"][data-kind="code"] {
+[data-slot="artifact-code"] {
   color: var(--uinify-color-artifact-code-fg);
   background: var(--uinify-color-artifact-code-bg);
   border-radius: var(--uinify-radius-sm);
 }
 
-[data-slot="message-part"][data-type="artifact"][data-kind="code"] pre {
+[data-slot="artifact-code"] pre {
   margin: 0;
   padding: var(--uinify-space-3);
   overflow-x: auto;

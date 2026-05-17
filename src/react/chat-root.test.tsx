@@ -65,6 +65,43 @@ describe("ChatRoot", () => {
     )
   })
 
+  it("exposes stable slots for reasoning toolcall and artifact-code blocks", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.reasoning.delta", messageId: "m1", partId: "p1", delta: "Think" })
+    runtime.dispatch({
+      type: "part.tool.updated",
+      messageId: "m1",
+      partId: "p2",
+      toolName: "search",
+      status: "complete",
+      inputSummary: "query",
+      outputSummary: "done",
+    })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "p3",
+      artifact: {
+        id: "a1",
+        kind: "code",
+        language: "ts",
+        content: "const answer = 42",
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByRole("button", { name: "Show reasoning" }).closest('[data-slot="reasoning"]')).toBeTruthy()
+    expect(screen.getByText("search").closest('[data-slot="toolcall"]')).toBeTruthy()
+    expect(screen.getByText("const answer = 42").closest('[data-slot="artifact-code"]')).toBeTruthy()
+  })
+
   it("throws when useChatRuntime is used outside ChatRoot", () => {
     function Consumer() {
       useChatRuntime()
