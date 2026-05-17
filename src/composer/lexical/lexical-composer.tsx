@@ -5,7 +5,12 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin"
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin"
-import { $createParagraphNode, $getRoot, type LexicalEditor } from "lexical"
+import {
+  $createParagraphNode,
+  $getRoot,
+  CLEAR_HISTORY_COMMAND,
+  type LexicalEditor,
+} from "lexical"
 import type { UiComposerAttachment, UiComposerValue } from "../contracts"
 import { AttachmentTray } from "../../react/attachment-tray"
 
@@ -30,6 +35,7 @@ export function LexicalComposer({
       root.clear()
       root.append($createParagraphNode())
     })
+    editorRef.current?.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
   return (
