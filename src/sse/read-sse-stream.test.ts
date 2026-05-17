@@ -34,6 +34,25 @@ describe("readSSEStream", () => {
     expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
   })
 
+  it("does not misparse CRLF event boundaries split across chunks", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("event: token\r"))
+        controller.enqueue(new TextEncoder().encode("\ndata: {\"delta\":\"hi\"}\r"))
+        controller.enqueue(new TextEncoder().encode("\n\r"))
+        controller.enqueue(new TextEncoder().encode("\n"))
+        controller.close()
+      },
+    })
+
+    const events = []
+    for await (const event of readSSEStream(stream)) {
+      events.push(event)
+    }
+
+    expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
+  })
+
   it("parses bare carriage-return framed SSE events", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
