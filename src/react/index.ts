@@ -2,9 +2,12 @@ export {
   ArtifactCodeBlock,
   type ArtifactCodeBlockProps,
 } from "./artifact-code-block"
+export { ChatRoot, type ChatRootProps, useChatRuntime } from "./chat-root"
+export { ErrorBoundary } from "./error-boundary"
 export { FeedbackButtons, type FeedbackButtonsProps } from "./feedback-buttons"
 export { ImagePart, type ImagePartProps } from "./image-part"
 export { Message, type MessageProps } from "./message"
+export { MessageList, type MessageListProps } from "./message-list"
 export { MessagePart, type MessagePartProps } from "./message-part"
 export {
   ReasoningBlock,
