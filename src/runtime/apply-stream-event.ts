@@ -10,8 +10,13 @@ function appendWarning(state: UiRuntimeState, warning: string): UiRuntimeState {
 
 function nextStatus(
   messages: UiRuntimeState["messages"],
+  error: UiRuntimeState["error"],
 ): UiRuntimeState["status"] {
-  return messages.some((message) => message.state === "streaming") ? "streaming" : "idle"
+  if (messages.some((message) => message.state === "streaming")) {
+    return "streaming"
+  }
+
+  return error ? "error" : "idle"
 }
 
 function withMessage(
@@ -31,7 +36,7 @@ function withMessage(
   return {
     ...state,
     messages,
-    status: nextStatus(messages),
+    status: nextStatus(messages, state.error),
   }
 }
 
@@ -84,7 +89,7 @@ export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): U
       return {
         ...next,
         error: event.error,
-        status: nextStatus(next.messages),
+        status: nextStatus(next.messages, event.error),
       }
     }
 

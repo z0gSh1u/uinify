@@ -118,7 +118,7 @@ describe("applyStreamEvent", () => {
     })
   })
 
-  it("returns to idle after a failed message no longer blocks active work", () => {
+  it("returns to error after active work finishes if a failure is still present", () => {
     const withFirst = applyStreamEvent(emptyState, {
       type: "message.started",
       messageId: "m1",
@@ -140,6 +140,24 @@ describe("applyStreamEvent", () => {
     })
 
     expect(failedFirst.status).toBe("streaming")
-    expect(completedSecond.status).toBe("idle")
+    expect(completedSecond.status).toBe("error")
+  })
+
+  it("sets runtime status to error when a message fails and no work is still streaming", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+
+    const failed = applyStreamEvent(withMessage, {
+      type: "message.failed",
+      messageId: "m1",
+      error: "boom",
+    })
+
+    expect(failed.messages[0]?.state).toBe("error")
+    expect(failed.error).toBe("boom")
+    expect(failed.status).toBe("error")
   })
 })

@@ -39,4 +39,24 @@ describe("createChatRuntime", () => {
 
     expect(runtime.getState().status).toBe("streaming")
   })
+
+  it("surfaces error status after a failed message event", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+
+    runtime.dispatch({
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    runtime.dispatch({
+      type: "message.failed",
+      messageId: "m1",
+      error: "boom",
+    })
+
+    expect(runtime.getState()).toMatchObject({
+      status: "error",
+      error: "boom",
+    })
+  })
 })
