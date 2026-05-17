@@ -1,10 +1,11 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ContentEditable } from "@lexical/react/LexicalContentEditable"
 import { LexicalComposer as BaseComposer } from "@lexical/react/LexicalComposer"
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin"
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin"
-import { $getRoot } from "lexical"
+import { $createParagraphNode, $getRoot, type LexicalEditor } from "lexical"
 import type { UiComposerAttachment, UiComposerValue } from "../contracts"
 import { AttachmentTray } from "../../react/attachment-tray"
 
@@ -18,7 +19,18 @@ export function LexicalComposer({
   initialAttachments = [],
 }: LexicalComposerProps) {
   const textRef = useRef("")
+  const editorRef = useRef<LexicalEditor | null>(null)
   const [attachments, setAttachments] = useState(initialAttachments)
+
+  const resetComposer = () => {
+    textRef.current = ""
+    setAttachments([])
+    editorRef.current?.update(() => {
+      const root = $getRoot()
+      root.clear()
+      root.append($createParagraphNode())
+    })
+  }
 
   return (
     <div data-slot="composer">
@@ -30,10 +42,15 @@ export function LexicalComposer({
           },
         }}
       >
+        <EditorRefPlugin
+          onReady={(editor) => {
+            editorRef.current = editor
+          }}
+        />
         <PlainTextPlugin
           contentEditable={
             <ContentEditable
-              aria-label="Message"
+              ariaLabel="Message"
               data-slot="composer-editor"
               onInput={(event) => {
                 textRef.current = event.currentTarget.textContent ?? ""
@@ -61,13 +78,24 @@ export function LexicalComposer({
       />
 
       <button
-        onClick={() =>
+        onClick={() => {
           onSubmit({ text: textRef.current, attachments, commands: [], mentions: [] })
-        }
+          resetComposer()
+        }}
         type="button"
       >
         Send
       </button>
     </div>
   )
+}
+
+function EditorRefPlugin({ onReady }: { onReady: (editor: LexicalEditor) => void }) {
+  const [editor] = useLexicalComposerContext()
+
+  useEffect(() => {
+    onReady(editor)
+  }, [editor, onReady])
+
+  return null
 }
