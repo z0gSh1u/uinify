@@ -12,5 +12,12 @@ describe("createChatRuntime", () => {
       error: null,
       warnings: [],
     })
+
+    runtime.setState({
+      ...runtime.getState(),
+      messages: ["draft"],
+    })
+
+    expect(runtime.getState().messages).toEqual(["draft"])
   })
 })
