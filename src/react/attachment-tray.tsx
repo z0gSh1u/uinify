@@ -1,4 +1,5 @@
 import type { UiComposerAttachment } from "../composer/contracts"
+import { useSlotClassNames } from "./chat-root"
 
 export type AttachmentTrayProps = {
   attachments: UiComposerAttachment[]
@@ -6,10 +7,13 @@ export type AttachmentTrayProps = {
 }
 
 export function AttachmentTray({ attachments, onRemove }: AttachmentTrayProps) {
+  const slotClassNames = useSlotClassNames()
+
   return (
     <div data-has-attachments={attachments.length > 0} data-slot="attachment-tray">
       {attachments.map((attachment) => (
         <div
+          className={slotClassNames.attachmentItem}
           key={attachment.id}
           data-slot="attachment-item"
           data-state={attachment.status}

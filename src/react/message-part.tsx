@@ -16,26 +16,34 @@ export function MessagePart({ part }: MessagePartProps) {
 
   switch (part.kind) {
     case "text":
-      return <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+      return (
+        <div data-slot="message-part" data-state="complete" data-type="text">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+        </div>
+      )
     case "image":
-      return <ImagePart part={part} />
+      return (
+        <div data-slot="message-part" data-state="complete" data-type="image">
+          <ImagePart part={part} />
+        </div>
+      )
     case "reasoning":
-      return renderers.renderReasoning ? (
-        <>{renderers.renderReasoning({ part })}</>
-      ) : (
-        <ReasoningBlock part={part} />
+      return (
+        <div data-slot="message-part" data-state={part.state} data-type="reasoning">
+          {renderers.renderReasoning ? <>{renderers.renderReasoning({ part })}</> : <ReasoningBlock part={part} />}
+        </div>
       )
     case "tool-call":
-      return renderers.renderToolCall ? (
-        <>{renderers.renderToolCall({ part })}</>
-      ) : (
-        <ToolCallBlock part={part} />
+      return (
+        <div data-slot="message-part" data-state={part.status} data-type="tool-call">
+          {renderers.renderToolCall ? <>{renderers.renderToolCall({ part })}</> : <ToolCallBlock part={part} />}
+        </div>
       )
     case "artifact":
-      return renderers.renderArtifactCode ? (
-        <>{renderers.renderArtifactCode({ part })}</>
-      ) : (
-        <ArtifactCodeBlock part={part} />
+      return (
+        <div data-kind={part.artifact.kind} data-slot="message-part" data-state="complete" data-type="artifact">
+          {renderers.renderArtifactCode ? <>{renderers.renderArtifactCode({ part })}</> : <ArtifactCodeBlock part={part} />}
+        </div>
       )
     default: {
       const exhaustiveCheck: never = part

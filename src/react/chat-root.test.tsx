@@ -41,6 +41,30 @@ describe("ChatRoot", () => {
     expect(screen.getByTestId("custom-reasoning")).toHaveTextContent("safe")
   })
 
+  it("applies slotClassNames to message and message-parts", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot
+        runtime={runtime}
+        slotClassNames={{
+          message: "custom-message",
+          messageParts: "custom-message-parts",
+        }}
+      >
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("Hello").closest('[data-slot="message"]')).toHaveClass("custom-message")
+    expect(screen.getByText("Hello").closest('[data-slot="message-parts"]')).toHaveClass(
+      "custom-message-parts",
+    )
+  })
+
   it("throws when useChatRuntime is used outside ChatRoot", () => {
     function Consumer() {
       useChatRuntime()

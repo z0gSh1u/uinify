@@ -3,16 +3,26 @@ import type { createChatRuntime } from "../runtime/create-chat-runtime"
 import { RenderersProvider, type MessageRendererOverrides } from "./renderers"
 
 const RuntimeContext = createContext<ReturnType<typeof createChatRuntime> | null>(null)
+const SlotClassNamesContext = createContext<SlotClassNames>({})
+
+export type SlotClassNames = Partial<{
+  message: string
+  messageParts: string
+  attachmentItem: string
+}>
 
 export type ChatRootProps = PropsWithChildren<{
   runtime: ReturnType<typeof createChatRuntime>
   renderers?: MessageRendererOverrides
+  slotClassNames?: SlotClassNames
 }>
 
-export function ChatRoot({ children, runtime, renderers }: ChatRootProps) {
+export function ChatRoot({ children, runtime, renderers, slotClassNames }: ChatRootProps) {
   return (
     <RuntimeContext.Provider value={runtime}>
-      <RenderersProvider value={renderers}>{children}</RenderersProvider>
+      <SlotClassNamesContext.Provider value={slotClassNames ?? {}}>
+        <RenderersProvider value={renderers}>{children}</RenderersProvider>
+      </SlotClassNamesContext.Provider>
     </RuntimeContext.Provider>
   )
 }
@@ -29,4 +39,8 @@ export function useChatRuntime() {
 
 export function useOptionalChatRuntime() {
   return useContext(RuntimeContext)
+}
+
+export function useSlotClassNames() {
+  return useContext(SlotClassNamesContext)
 }

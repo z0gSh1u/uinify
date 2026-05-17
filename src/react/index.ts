@@ -3,7 +3,13 @@ export {
   type ArtifactCodeBlockProps,
 } from "./artifact-code-block"
 export { AttachmentTray, type AttachmentTrayProps } from "./attachment-tray"
-export { ChatRoot, type ChatRootProps, useChatRuntime } from "./chat-root"
+export {
+  ChatRoot,
+  type ChatRootProps,
+  type SlotClassNames,
+  useChatRuntime,
+  useSlotClassNames,
+} from "./chat-root"
 export { ErrorBoundary } from "./error-boundary"
 export { FeedbackButtons, type FeedbackButtonsProps } from "./feedback-buttons"
 export { ImagePart, type ImagePartProps } from "./image-part"
