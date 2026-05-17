@@ -1,7 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { act } from "react"
-import { $createParagraphNode, $createTextNode, $getRoot, type LexicalEditor } from "lexical"
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getRoot,
+  type LexicalEditor,
+  type TextNode,
+} from "lexical"
 import { describe, expect, it, vi } from "vitest"
 import { SlashCommandPlugin } from "./slash-command-plugin"
 import { LexicalComposer } from "../lexical-composer"
@@ -22,6 +28,10 @@ function getEditorText(element: HTMLElement) {
 }
 
 function setEditorText(element: HTMLElement, text: string) {
+  setEditorTextWithCaret(element, text, text.length)
+}
+
+function setEditorTextWithCaret(element: HTMLElement, text: string, caretOffset: number) {
   const editor = getEditor(element)
 
   expect(editor).toBeDefined()
@@ -29,8 +39,10 @@ function setEditorText(element: HTMLElement, text: string) {
   act(() => {
     editor?.update(() => {
       const root = $getRoot()
+      const textNode = $createTextNode(text)
       root.clear()
-      root.append($createParagraphNode().append($createTextNode(text)))
+      root.append($createParagraphNode().append(textNode))
+      textNode.select(caretOffset, caretOffset)
     })
   })
 }
@@ -85,6 +97,31 @@ describe("SlashCommandPlugin", () => {
 
     await waitFor(() => {
       expect(getEditorText(textbox)).toBe("/agent ")
+    })
+  })
+
+  it("replaces the slash token around the current caret instead of the document tail", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <LexicalComposer
+        onSubmit={() => undefined}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorTextWithCaret(textbox, "Prefix /ag middle", 10)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "agent" })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "agent" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("Prefix /agent middle")
     })
   })
 })

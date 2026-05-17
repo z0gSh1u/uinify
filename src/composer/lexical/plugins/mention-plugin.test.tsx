@@ -1,7 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { act } from "react"
-import { $createParagraphNode, $createTextNode, $getRoot, type LexicalEditor } from "lexical"
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getRoot,
+  type LexicalEditor,
+} from "lexical"
 import { describe, expect, it, vi } from "vitest"
 import { MentionPlugin } from "./mention-plugin"
 import { LexicalComposer } from "../lexical-composer"
@@ -22,6 +27,10 @@ function getEditorText(element: HTMLElement) {
 }
 
 function setEditorText(element: HTMLElement, text: string) {
+  setEditorTextWithCaret(element, text, text.length)
+}
+
+function setEditorTextWithCaret(element: HTMLElement, text: string, caretOffset: number) {
   const editor = getEditor(element)
 
   expect(editor).toBeDefined()
@@ -29,8 +38,10 @@ function setEditorText(element: HTMLElement, text: string) {
   act(() => {
     editor?.update(() => {
       const root = $getRoot()
+      const textNode = $createTextNode(text)
       root.clear()
-      root.append($createParagraphNode().append($createTextNode(text)))
+      root.append($createParagraphNode().append(textNode))
+      textNode.select(caretOffset, caretOffset)
     })
   })
 }
@@ -85,6 +96,31 @@ describe("MentionPlugin", () => {
 
     await waitFor(() => {
       expect(getEditorText(textbox)).toBe("@worker ")
+    })
+  })
+
+  it("replaces the mention token around the current caret instead of the document tail", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <LexicalComposer
+        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        onSubmit={() => undefined}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorTextWithCaret(textbox, "Prefix @wo middle", 10)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "worker" })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "worker" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("Prefix @worker middle")
     })
   })
 })

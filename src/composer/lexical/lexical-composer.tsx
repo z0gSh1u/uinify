@@ -9,6 +9,8 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $getSelection,
+  $isRangeSelection,
   CLEAR_HISTORY_COMMAND,
   type LexicalEditor,
 } from "lexical"
@@ -21,6 +23,16 @@ import { AttachmentTray } from "../../react/attachment-tray"
 import { createAttachmentHandlers } from "./plugins/attachment-plugin"
 import { MentionPlugin } from "./plugins/mention-plugin"
 import { SlashCommandPlugin } from "./plugins/slash-command-plugin"
+
+type ActiveTokenRange = {
+  start: number
+  end: number
+}
+
+type ActiveTokenState = {
+  token: string
+  range: ActiveTokenRange | null
+}
 
 export type LexicalComposerProps = {
   onSubmit: (value: UiComposerValue) => void
@@ -38,20 +50,28 @@ export function LexicalComposer({
   const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
   const [attachments, setAttachments] = useState(initialAttachments)
-  const activeToken = useMemo(() => text.split(/\s+/).at(-1) ?? "", [text])
+  const [activeToken, setActiveToken] = useState("")
   const attachmentHandlers = useMemo(
     () => createAttachmentHandlers((items) => setAttachments((current) => [...current, ...items])),
     [],
   )
 
-  const replaceActiveToken = (currentText: string, insertText: string) => {
-    const match = currentText.match(/(^|\s)([\/@]\S*)$/)
+  const getActiveTokenState = (): ActiveTokenState => readActiveTokenState(editorRef.current)
 
-    if (!match || typeof match.index !== "number") {
+  const replaceActiveToken = (insertText: string) => {
+    const state = getActiveTokenState()
+    const range = state.range
+
+    if (!range) {
       return insertText
     }
 
-    return `${currentText.slice(0, match.index)}${match[1]}${insertText}`
+    const prefix = text.slice(0, range.start)
+    const suffix = text.slice(range.end)
+    const normalizedSuffix =
+      insertText.endsWith(" ") && /^\s/.test(suffix) ? suffix.replace(/^\s+/, "") : suffix
+
+    return `${prefix}${insertText}${normalizedSuffix}`
   }
 
   const setEditorText = (nextText: string) => {
@@ -64,7 +84,7 @@ export function LexicalComposer({
   }
 
   const insertChoice = (choice: UiComposerChoice) => {
-    setEditorText(replaceActiveToken(text, choice.insertText))
+    setEditorText(replaceActiveToken(choice.insertText))
   }
 
   const resetComposer = () => {
@@ -116,6 +136,7 @@ export function LexicalComposer({
             })
           }}
         />
+        <ActiveTokenPlugin onChange={setActiveToken} />
       </BaseComposer>
 
       <SlashCommandPlugin items={slashCommands} onSelect={insertChoice} query={activeToken} />
@@ -139,6 +160,78 @@ export function LexicalComposer({
       </button>
     </div>
   )
+}
+
+function ActiveTokenPlugin({ onChange }: { onChange: (token: string) => void }) {
+  const [editor] = useLexicalComposerContext()
+
+  useEffect(() => {
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        onChange(readActiveTokenState(editor).token)
+      })
+    })
+  }, [editor, onChange])
+
+  return null
+}
+
+function readActiveTokenState(editor: LexicalEditor | null): ActiveTokenState {
+  let token = ""
+  let range: ActiveTokenRange | null = null
+
+  editor?.getEditorState().read(() => {
+    const selection = $getSelection()
+
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") {
+      return
+    }
+
+    const anchorNode = selection.anchor.getNode()
+    const parent = anchorNode.getParent()
+
+    if (!parent) {
+      return
+    }
+
+    const siblings = parent.getChildren()
+    let absoluteOffset = 0
+
+    for (const sibling of siblings) {
+      if (sibling.getKey() === anchorNode.getKey()) {
+        absoluteOffset += selection.anchor.offset
+        break
+      }
+
+      absoluteOffset += sibling.getTextContentSize()
+    }
+
+    const fullText = parent.getTextContent()
+    const tokenStart = fullText.slice(0, absoluteOffset).search(/(?:^|\s)[\/@]\S*$/)
+
+    if (tokenStart === -1) {
+      return
+    }
+
+    const prefix = fullText[tokenStart]
+    const actualStart = prefix === "/" || prefix === "@" ? tokenStart : tokenStart + 1
+    let actualEnd = absoluteOffset
+
+    while (actualEnd < fullText.length && !/\s/.test(fullText[actualEnd] ?? "")) {
+      actualEnd += 1
+    }
+
+    const nextToken = fullText.slice(actualStart, actualEnd)
+
+    if (!nextToken.startsWith("/") && !nextToken.startsWith("@")) {
+      return
+    }
+
+    token = nextToken
+    range = { start: actualStart, end: actualEnd }
+  })
+
+  return { token, range }
 }
 
 function EditorRefPlugin({ onReady }: { onReady: (editor: LexicalEditor) => void }) {
