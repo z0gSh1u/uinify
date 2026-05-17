@@ -5,6 +5,12 @@ export type UiComposerAttachment = {
   error?: string
 }
 
+export type UiComposerChoice = {
+  id: string
+  label: string
+  insertText: string
+}
+
 export type UiComposerValue = {
   text: string
   attachments: UiComposerAttachment[]

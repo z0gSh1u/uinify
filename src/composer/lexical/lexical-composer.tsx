@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ContentEditable } from "@lexical/react/LexicalContentEditable"
 import { LexicalComposer as BaseComposer } from "@lexical/react/LexicalComposer"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
@@ -7,28 +7,68 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin"
 import {
   $createParagraphNode,
+  $createTextNode,
   $getRoot,
   CLEAR_HISTORY_COMMAND,
   type LexicalEditor,
 } from "lexical"
-import type { UiComposerAttachment, UiComposerValue } from "../contracts"
+import type {
+  UiComposerAttachment,
+  UiComposerChoice,
+  UiComposerValue,
+} from "../contracts"
 import { AttachmentTray } from "../../react/attachment-tray"
+import { createAttachmentHandlers } from "./plugins/attachment-plugin"
+import { MentionPlugin } from "./plugins/mention-plugin"
+import { SlashCommandPlugin } from "./plugins/slash-command-plugin"
 
 export type LexicalComposerProps = {
   onSubmit: (value: UiComposerValue) => void
   initialAttachments?: UiComposerAttachment[]
+  slashCommands?: UiComposerChoice[]
+  mentions?: UiComposerChoice[]
 }
 
 export function LexicalComposer({
   onSubmit,
   initialAttachments = [],
+  slashCommands = [],
+  mentions = [],
 }: LexicalComposerProps) {
-  const textRef = useRef("")
+  const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
   const [attachments, setAttachments] = useState(initialAttachments)
+  const activeToken = useMemo(() => text.split(/\s+/).at(-1) ?? "", [text])
+  const attachmentHandlers = useMemo(
+    () => createAttachmentHandlers((items) => setAttachments((current) => [...current, ...items])),
+    [],
+  )
+
+  const replaceActiveToken = (currentText: string, insertText: string) => {
+    const match = currentText.match(/(^|\s)([\/@]\S*)$/)
+
+    if (!match || typeof match.index !== "number") {
+      return insertText
+    }
+
+    return `${currentText.slice(0, match.index)}${match[1]}${insertText}`
+  }
+
+  const setEditorText = (nextText: string) => {
+    setText(nextText)
+    editorRef.current?.update(() => {
+      const root = $getRoot()
+      root.clear()
+      root.append($createParagraphNode().append($createTextNode(nextText)))
+    })
+  }
+
+  const insertChoice = (choice: UiComposerChoice) => {
+    setEditorText(replaceActiveToken(text, choice.insertText))
+  }
 
   const resetComposer = () => {
-    textRef.current = ""
+    setText("")
     setAttachments([])
     editorRef.current?.update(() => {
       const root = $getRoot()
@@ -59,8 +99,10 @@ export function LexicalComposer({
               ariaLabel="Message"
               data-slot="composer-editor"
               onInput={(event) => {
-                textRef.current = event.currentTarget.textContent ?? ""
+                setText(event.currentTarget.textContent ?? "")
               }}
+              onDrop={attachmentHandlers.onDrop}
+              onPaste={attachmentHandlers.onPaste}
             />
           }
           placeholder={<span>Message</span>}
@@ -70,11 +112,14 @@ export function LexicalComposer({
         <OnChangePlugin
           onChange={(editorState) => {
             editorState.read(() => {
-              textRef.current = $getRoot().getTextContent()
+              setText($getRoot().getTextContent())
             })
           }}
         />
       </BaseComposer>
+
+      <SlashCommandPlugin items={slashCommands} onSelect={insertChoice} query={activeToken} />
+      <MentionPlugin items={mentions} onSelect={insertChoice} query={activeToken} />
 
       <AttachmentTray
         attachments={attachments}
@@ -85,7 +130,7 @@ export function LexicalComposer({
 
       <button
         onClick={() => {
-          onSubmit({ text: textRef.current, attachments, commands: [], mentions: [] })
+          onSubmit({ text, attachments, commands: [], mentions: [] })
           resetComposer()
         }}
         type="button"
