@@ -8,7 +8,9 @@ function appendWarning(state: UiRuntimeState, warning: string): UiRuntimeState {
   }
 }
 
-function nextStatus(messages: UiRuntimeState["messages"]): UiRuntimeState["status"] {
+function nextStatus(
+  messages: UiRuntimeState["messages"],
+): UiRuntimeState["status"] {
   return messages.some((message) => message.state === "streaming") ? "streaming" : "idle"
 }
 
@@ -29,7 +31,7 @@ function withMessage(
   return {
     ...state,
     messages,
-    status: state.status === "error" ? "error" : nextStatus(messages),
+    status: nextStatus(messages),
   }
 }
 
@@ -81,8 +83,8 @@ export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): U
 
       return {
         ...next,
-        status: "error",
         error: event.error,
+        status: nextStatus(next.messages),
       }
     }
 
@@ -120,17 +122,27 @@ export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): U
       })
 
     case "part.tool.updated":
-      return withMessage(state, event.messageId, (message) => ({
-        ...message,
-        parts: upsertPart(message.parts, {
-          id: event.partId,
-          kind: "tool-call",
-          toolName: event.toolName,
-          status: event.status,
-          inputSummary: event.inputSummary ?? null,
-          outputSummary: event.outputSummary ?? null,
-        }),
-      }))
+      return withMessage(state, event.messageId, (message) => {
+        const current = message.parts.find(
+          (part) => part.id === event.partId && part.kind === "tool-call",
+        )
+        const inputSummary =
+          event.inputSummary ?? (current?.kind === "tool-call" ? current.inputSummary : null)
+        const outputSummary =
+          event.outputSummary ?? (current?.kind === "tool-call" ? current.outputSummary : null)
+
+        return {
+          ...message,
+          parts: upsertPart(message.parts, {
+            id: event.partId,
+            kind: "tool-call",
+            toolName: event.toolName,
+            status: event.status,
+            inputSummary,
+            outputSummary,
+          }),
+        }
+      })
 
     case "part.artifact.emitted":
       return withMessage(state, event.messageId, (message) => ({

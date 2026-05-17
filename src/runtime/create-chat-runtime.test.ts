@@ -15,9 +15,28 @@ describe("createChatRuntime", () => {
 
     runtime.setState({
       ...runtime.getState(),
-      messages: ["draft"],
+      status: "streaming",
     })
 
-    expect(runtime.getState().messages).toEqual(["draft"])
+    expect(runtime.getState().status).toBe("streaming")
+  })
+
+  it("accepts only typed state updates", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+
+    runtime.setState((current: ReturnType<typeof runtime.getState>) => ({
+      ...current,
+      status: "streaming",
+    }))
+
+    const invalidState: Parameters<typeof runtime.setState>[0] = {
+      ...runtime.getState(),
+      // @ts-expect-error messages must remain UiMessage[]
+      messages: ["draft"],
+    }
+
+    void invalidState
+
+    expect(runtime.getState().status).toBe("streaming")
   })
 })

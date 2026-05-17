@@ -84,4 +84,62 @@ describe("applyStreamEvent", () => {
     expect(next.warnings).toEqual(["Missing message missing for event"])
     expect(next.messages).toEqual([])
   })
+
+  it("preserves existing tool summaries when an update omits them", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const withTool = applyStreamEvent(withMessage, {
+      type: "part.tool.updated",
+      messageId: "m1",
+      partId: "tool-1",
+      toolName: "web_search",
+      status: "running",
+      inputSummary: "query=uinify",
+      outputSummary: "1 result",
+    })
+    const updated = applyStreamEvent(withTool, {
+      type: "part.tool.updated",
+      messageId: "m1",
+      partId: "tool-1",
+      toolName: "web_search",
+      status: "complete",
+    })
+
+    expect(updated.messages[0]?.parts).toContainEqual({
+      id: "tool-1",
+      kind: "tool-call",
+      toolName: "web_search",
+      status: "complete",
+      inputSummary: "query=uinify",
+      outputSummary: "1 result",
+    })
+  })
+
+  it("returns to idle after a failed message no longer blocks active work", () => {
+    const withFirst = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const withSecond = applyStreamEvent(withFirst, {
+      type: "message.started",
+      messageId: "m2",
+      role: "assistant",
+    })
+    const failedFirst = applyStreamEvent(withSecond, {
+      type: "message.failed",
+      messageId: "m1",
+      error: "boom",
+    })
+    const completedSecond = applyStreamEvent(failedFirst, {
+      type: "message.completed",
+      messageId: "m2",
+    })
+
+    expect(failedFirst.status).toBe("streaming")
+    expect(completedSecond.status).toBe("idle")
+  })
 })

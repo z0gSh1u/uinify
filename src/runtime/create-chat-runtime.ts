@@ -3,6 +3,7 @@ import { applyStreamEvent } from "./apply-stream-event"
 import type { UiStreamEvent } from "./events"
 
 type Listener = () => void
+type StateUpdater = UiRuntimeState | ((current: UiRuntimeState) => UiRuntimeState)
 
 export function createChatRuntime(input: { conversationId?: string } = {}) {
   let state: UiRuntimeState = {
@@ -20,11 +21,11 @@ export function createChatRuntime(input: { conversationId?: string } = {}) {
     getState() {
       return state
     },
-    setState(next: UiRuntimeState | ((current: UiRuntimeState) => UiRuntimeState) | unknown) {
+    setState(next: StateUpdater) {
       if (typeof next === "function") {
-        state = (next as (current: UiRuntimeState) => UiRuntimeState)(state)
+        state = next(state)
       } else {
-        state = next as UiRuntimeState
+        state = next
       }
 
       emit()
