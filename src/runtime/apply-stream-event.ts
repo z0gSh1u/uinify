@@ -1,4 +1,4 @@
-import type { UiMessage, UiMessagePart, UiRuntimeState } from "../model/types"
+import type { UiAttachment, UiMessage, UiMessagePart, UiRuntimeState } from "../model/types"
 import type { UiStreamEvent } from "./events"
 
 function appendWarning(state: UiRuntimeState, warning: string): UiRuntimeState {
@@ -50,6 +50,53 @@ function upsertPart(parts: UiMessagePart[], part: UiMessagePart): UiMessagePart[
   const next = [...parts]
   next[index] = part
   return next
+}
+
+function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachment): UiAttachment {
+  const base = {
+    id: incoming.id,
+    name: incoming.name,
+    mimeType: incoming.mimeType ?? current?.mimeType,
+    size: incoming.size ?? current?.size,
+  }
+
+  switch (incoming.status) {
+    case "queued":
+      return {
+        ...base,
+        status: incoming.status,
+      }
+
+    case "uploading":
+      return {
+        ...base,
+        status: incoming.status,
+        ...(incoming.progress !== undefined ? { progress: incoming.progress } : {}),
+      }
+
+    case "uploaded":
+      return {
+        ...base,
+        status: incoming.status,
+        ...(incoming.remoteUrl ?? current?.remoteUrl
+          ? { remoteUrl: incoming.remoteUrl ?? current?.remoteUrl }
+          : {}),
+      }
+
+    case "error":
+      return {
+        ...base,
+        status: incoming.status,
+        ...(incoming.error !== undefined ? { error: incoming.error } : {}),
+      }
+
+    case "removed":
+      return {
+        id: incoming.id,
+        name: incoming.name,
+        status: incoming.status,
+      }
+  }
 }
 
 export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): UiRuntimeState {
@@ -158,5 +205,24 @@ export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): U
           artifact: event.artifact,
         }),
       }))
+
+    case "part.attachment.updated":
+      return withMessage(state, event.messageId, (message) => {
+        const current = message.parts.find(
+          (part) => part.id === event.partId && part.kind === "attachment",
+        )
+
+        return {
+          ...message,
+          parts: upsertPart(message.parts, {
+            id: event.partId,
+            kind: "attachment",
+            attachment: nextAttachment(
+              current?.kind === "attachment" ? current.attachment : undefined,
+              event.attachment,
+            ),
+          }),
+        }
+      })
   }
 }

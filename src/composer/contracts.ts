@@ -1,8 +1,7 @@
-export type UiComposerAttachment = {
-  id: string
+import type { UiAttachment } from "../model/types"
+
+export type UiComposerAttachment = UiAttachment & {
   file: File
-  status: "ready" | "uploading" | "error"
-  error?: string
 }
 
 export type UiComposerChoice = {

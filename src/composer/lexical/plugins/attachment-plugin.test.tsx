@@ -4,7 +4,7 @@ import { collectAttachments, createAttachmentHandlers } from "./attachment-plugi
 import { LexicalComposer } from "../lexical-composer"
 
 describe("attachment-plugin", () => {
-  it("collectAttachments creates ready attachments with unique ids across calls", () => {
+  it("collectAttachments creates queued attachments with canonical file metadata and unique ids across calls", () => {
     const file = new File(["hello"], "hello.txt", { type: "text/plain" })
     const first = collectAttachments([file])
     const second = collectAttachments([file])
@@ -12,13 +12,19 @@ describe("attachment-plugin", () => {
     expect(first).toEqual([
       expect.objectContaining({
         file,
-        status: "ready",
+        name: "hello.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
       }),
     ])
     expect(second).toEqual([
       expect.objectContaining({
         file,
-        status: "ready",
+        name: "hello.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
       }),
     ])
     expect(first[0]?.id).not.toBe(second[0]?.id)
@@ -38,10 +44,22 @@ describe("attachment-plugin", () => {
 
     expect(onAdd).toHaveBeenCalledTimes(2)
     expect(onAdd.mock.calls[0]?.[0][0]).toEqual(
-      expect.objectContaining({ file, status: "ready" }),
+      expect.objectContaining({
+        file,
+        name: "hello.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
+      }),
     )
     expect(onAdd.mock.calls[1]?.[0][0]).toEqual(
-      expect.objectContaining({ file, status: "ready" }),
+      expect.objectContaining({
+        file,
+        name: "hello.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
+      }),
     )
     expect(onAdd.mock.calls[0]?.[0][0].id).not.toBe(onAdd.mock.calls[1]?.[0][0].id)
     expect(preventPasteDefault).toHaveBeenCalledTimes(1)

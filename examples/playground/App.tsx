@@ -1,21 +1,22 @@
 import { useState } from "react"
 import type { MessageRendererOverrides } from "../../src/react"
-import { ChatRoot, MessageList } from "../../src/react"
-import { createExampleRuntime, exampleFixtures, type ExampleFixture } from "../fixtures"
+import { ChatRoot, MessageList, renderDefaultArtifactBody } from "../../src/react"
+import { createExampleRuntime, exampleFixtureSections, type ExampleFixture } from "../fixtures"
 
 const customRenderers: MessageRendererOverrides = {
-  renderReasoning: ({ part }) => <div>Adapter note: {part.text}</div>,
-  renderToolCall: ({ part }) => (
-    <div>
-      <strong>Custom tool:</strong> {part.toolName}
-      {part.outputSummary ? <p>{part.outputSummary}</p> : null}
-    </div>
-  ),
-  renderArtifactCode: ({ part }) => (
-    <div>
-      Custom code artifact ({part.artifact.language ?? "code"}): {part.artifact.content}
-    </div>
-  ),
+  artifactRegistry: {
+    code: ({ artifact, view }) => {
+      const language = view.language ?? artifact.metadata?.language ?? "code"
+      const value = renderDefaultArtifactBody({ artifact, part: { id: "example-artifact", kind: "artifact", artifact }, view })
+
+      return (
+        <div>
+          <div>Artifact registry override ({language}):</div>
+          {value}
+        </div>
+      )
+    },
+  },
 }
 
 function ExampleScenario({ fixture }: { fixture: ExampleFixture }) {
@@ -39,9 +40,16 @@ export function ExamplePlayground() {
   return (
     <main>
       <h1>uinify examples</h1>
-      {exampleFixtures.map((fixture) => (
-        <ExampleScenario key={fixture.id} fixture={fixture} />
-      ))}
+      {exampleFixtureSections.map((group) => {
+        return (
+          <section key={group.id}>
+            <h2>{group.title}</h2>
+            {group.fixtures.map((fixture) => (
+              <ExampleScenario key={fixture.id} fixture={fixture} />
+            ))}
+          </section>
+        )
+      })}
     </main>
   )
 }

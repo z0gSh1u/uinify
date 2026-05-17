@@ -38,6 +38,10 @@ type ActiveTokenState = {
 export type LexicalComposerProps = {
   onSubmit: (value: UiComposerValue) => void
   initialAttachments?: UiComposerAttachment[]
+  attachments?: UiComposerAttachment[]
+  onAttachmentsChange?: (attachments: UiComposerAttachment[]) => void
+  onAttachmentRetry?: (attachment: UiComposerAttachment) => void
+  sendPolicy?: "allow-pending" | "uploaded-only"
   slashCommands?: UiComposerChoice[]
   mentions?: UiComposerChoice[]
 }
@@ -45,17 +49,46 @@ export type LexicalComposerProps = {
 export function LexicalComposer({
   onSubmit,
   initialAttachments = [],
+  attachments: controlledAttachments,
+  onAttachmentsChange,
+  onAttachmentRetry,
+  sendPolicy = "allow-pending",
   slashCommands = [],
   mentions = [],
 }: LexicalComposerProps) {
   const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
   const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
-  const [attachments, setAttachments] = useState(initialAttachments)
+  const [uncontrolledAttachments, setUncontrolledAttachments] = useState(initialAttachments)
   const [activeToken, setActiveToken] = useState("")
+  const attachments = controlledAttachments ?? uncontrolledAttachments
+  const setComposerAttachments = (
+    nextAttachments:
+      | UiComposerAttachment[]
+      | ((current: UiComposerAttachment[]) => UiComposerAttachment[]),
+  ) => {
+    if (controlledAttachments === undefined) {
+      setUncontrolledAttachments((current) => {
+        const resolvedNextAttachments =
+          typeof nextAttachments === "function" ? nextAttachments(current) : nextAttachments
+
+        onAttachmentsChange?.(resolvedNextAttachments)
+        return resolvedNextAttachments
+      })
+      return
+    }
+
+    const resolvedNextAttachments =
+      typeof nextAttachments === "function" ? nextAttachments(controlledAttachments) : nextAttachments
+
+    onAttachmentsChange?.(resolvedNextAttachments)
+  }
+  const updateAttachments = (updater: (current: UiComposerAttachment[]) => UiComposerAttachment[]) => {
+    setComposerAttachments(updater)
+  }
   const attachmentHandlers = useMemo(
-    () => createAttachmentHandlers((items) => setAttachments((current) => [...current, ...items])),
-    [],
+    () => createAttachmentHandlers((items) => updateAttachments((current) => [...current, ...items])),
+    [attachments, controlledAttachments, onAttachmentsChange],
   )
 
   const getActiveTokenState = (): ActiveTokenState => readActiveTokenState(editorRef.current)
@@ -174,7 +207,7 @@ export function LexicalComposer({
 
   const resetComposer = () => {
     setText("")
-    setAttachments([])
+    setComposerAttachments([])
     editorRef.current?.update(() => {
       const root = $getRoot()
       root.clear()
@@ -182,6 +215,12 @@ export function LexicalComposer({
     })
     editorRef.current?.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
+
+  const submittableAttachments = attachments.filter((attachment) => attachment.status !== "removed")
+
+  const isSubmitBlocked =
+    sendPolicy === "uploaded-only" &&
+    submittableAttachments.some((attachment) => attachment.status !== "uploaded")
 
   return (
     <div data-slot="composer">
@@ -237,13 +276,19 @@ export function LexicalComposer({
 
       <AttachmentTray
         attachments={attachments}
+        onRetry={onAttachmentRetry}
         onRemove={(id) => {
-          setAttachments((items) => items.filter((item) => item.id !== id))
+          updateAttachments((items) => items.filter((item) => item.id !== id))
         }}
       />
 
       <button
+        disabled={isSubmitBlocked}
         onClick={() => {
+          if (isSubmitBlocked) {
+            return
+          }
+
           const { commands: submitCommands, mentions: submitMentions } = deriveSubmitMetadata(
             text,
             slashCommands,
@@ -252,7 +297,7 @@ export function LexicalComposer({
 
           onSubmit({
             text,
-            attachments,
+            attachments: submittableAttachments,
             commands: submitCommands,
             mentions: submitMentions,
           })

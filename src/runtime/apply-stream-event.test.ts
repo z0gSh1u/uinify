@@ -44,8 +44,28 @@ describe("applyStreamEvent", () => {
       artifact: {
         id: "a1",
         kind: "code",
-        language: "ts",
-        content: "console.log('uinify')",
+        title: "Runtime snippet",
+        metadata: {
+          language: "ts",
+          lines: 1,
+          runnable: true,
+        },
+        defaultViewId: "source",
+        views: [
+          {
+            id: "source",
+            label: "Source",
+            kind: "source",
+            language: "ts",
+            value: "console.log('uinify')",
+          },
+          {
+            id: "preview",
+            label: "Preview",
+            kind: "structured",
+            value: { summary: "Logs the demo label" },
+          },
+        ],
       },
     })
 
@@ -66,8 +86,28 @@ describe("applyStreamEvent", () => {
         artifact: {
           id: "a1",
           kind: "code",
-          language: "ts",
-          content: "console.log('uinify')",
+          title: "Runtime snippet",
+          metadata: {
+            language: "ts",
+            lines: 1,
+            runnable: true,
+          },
+          defaultViewId: "source",
+          views: [
+            {
+              id: "source",
+              label: "Source",
+              kind: "source",
+              language: "ts",
+              value: "console.log('uinify')",
+            },
+            {
+              id: "preview",
+              label: "Preview",
+              kind: "structured",
+              value: { summary: "Logs the demo label" },
+            },
+          ],
         },
       },
     ])
@@ -115,6 +155,134 @@ describe("applyStreamEvent", () => {
       status: "complete",
       inputSummary: "query=uinify",
       outputSummary: "1 result",
+    })
+  })
+
+  it("preserves stable attachment metadata across upload updates", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const uploading = applyStreamEvent(withMessage, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+        size: 1024,
+        status: "uploading",
+        progress: 0.4,
+      },
+    })
+    const uploaded = applyStreamEvent(uploading, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+
+    expect(uploaded.messages[0]?.parts).toContainEqual({
+      id: "attachment-1",
+      kind: "attachment",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+        size: 1024,
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+  })
+
+  it("clears stale attachment error when a failed upload retries", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const failed = applyStreamEvent(withMessage, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "error",
+        error: "network timeout",
+      },
+    })
+    const retried = applyStreamEvent(failed, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploading",
+        progress: 0.2,
+      },
+    })
+
+    expect(retried.messages[0]?.parts).toContainEqual({
+      id: "attachment-1",
+      kind: "attachment",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploading",
+        progress: 0.2,
+      },
+    })
+  })
+
+  it("drops stale transient fields when an attachment reaches a terminal state", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const errored = applyStreamEvent(withMessage, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+        size: 1024,
+        status: "error",
+        progress: 0.9,
+        error: "network timeout",
+      },
+    })
+    const removed = applyStreamEvent(errored, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "removed",
+      },
+    })
+
+    expect(removed.messages[0]?.parts).toContainEqual({
+      id: "attachment-1",
+      kind: "attachment",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "removed",
+      },
     })
   })
 

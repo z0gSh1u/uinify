@@ -1,4 +1,5 @@
 import type { UiArtifactPart } from "../model/types"
+import { getDefaultArtifactView, renderDefaultArtifactBody } from "./artifact-body"
 
 export type ArtifactCodeBlockProps = {
   part: UiArtifactPart
@@ -6,16 +7,13 @@ export type ArtifactCodeBlockProps = {
 
 export function ArtifactCodeBlock({ part }: ArtifactCodeBlockProps) {
   const { artifact } = part
-  const label = artifact.kind === "code" ? artifact.language ?? "code" : "text"
+  const view = getDefaultArtifactView(artifact) ?? null
+  const label = view?.label ?? artifact.title ?? artifact.kind
 
   return (
     <section>
       <header>{label}</header>
-      <div>
-        <pre>
-          {artifact.kind === "code" ? <code>{artifact.content}</code> : artifact.content}
-        </pre>
-      </div>
+      <div>{view ? renderDefaultArtifactBody({ artifact, part, view }) : null}</div>
     </section>
   )
 }

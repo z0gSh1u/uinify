@@ -57,7 +57,8 @@ export function MessageList({ messages }: MessageListProps) {
   const rendererKey = [
     getIdentityKey(renderers.renderReasoning),
     getIdentityKey(renderers.renderToolCall),
-    getIdentityKey(renderers.renderArtifactCode),
+    getIdentityKey(renderers.artifactRegistry),
+    getIdentityKey(renderers.renderArtifactFallback),
     getIdentityKey(runtime),
   ].join(":")
 

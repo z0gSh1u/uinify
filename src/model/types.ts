@@ -29,11 +29,36 @@ export type UiToolCallPart = {
   outputSummary: string | null
 }
 
+export type UiAttachmentStatus = "queued" | "uploading" | "uploaded" | "error" | "removed"
+
+export type UiAttachment = {
+  id: string
+  name: string
+  mimeType?: string
+  size?: number
+  status: UiAttachmentStatus
+  progress?: number
+  error?: string
+  remoteUrl?: string
+}
+
+export type UiArtifactMetadataValue = string | number | boolean | null
+
+export type UiArtifactView = {
+  id: string
+  label: string
+  kind: "source" | "preview" | "structured"
+  language?: string
+  value: string | Record<string, unknown>
+}
+
 export type UiArtifact = {
   id: string
-  kind: "code" | "text"
-  language?: string
-  content: string
+  kind: string
+  title?: string
+  metadata?: Record<string, UiArtifactMetadataValue>
+  defaultViewId?: string
+  views: UiArtifactView[]
 }
 
 export type UiArtifactPart = {
@@ -42,12 +67,19 @@ export type UiArtifactPart = {
   artifact: UiArtifact
 }
 
+export type UiAttachmentPart = {
+  id: string
+  kind: "attachment"
+  attachment: UiAttachment
+}
+
 export type UiMessagePart =
   | UiTextPart
   | UiImagePart
   | UiReasoningPart
   | UiToolCallPart
   | UiArtifactPart
+  | UiAttachmentPart
 
 export type UiMessage = {
   id: string

@@ -7,7 +7,10 @@ export function collectAttachments(files: FileList | File[]) {
   return Array.from(files).map<UiComposerAttachment>((file, index) => ({
     id: `${Date.now()}-${attachmentIdCounter++}-${index}-${file.name}`,
     file,
-    status: "ready",
+    name: file.name,
+    mimeType: file.type,
+    size: file.size,
+    status: "queued",
   }))
 }
 

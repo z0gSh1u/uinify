@@ -85,8 +85,15 @@ describe("ChatRoot", () => {
       artifact: {
         id: "a1",
         kind: "code",
-        language: "ts",
-        content: "const answer = 42",
+        views: [
+          {
+            id: "source",
+            label: "TypeScript",
+            kind: "source",
+            language: "ts",
+            value: "const answer = 42",
+          },
+        ],
       },
     })
     runtime.dispatch({ type: "message.completed", messageId: "m1" })
@@ -100,6 +107,35 @@ describe("ChatRoot", () => {
     expect(screen.getByRole("button", { name: "Show reasoning" }).closest('[data-slot="reasoning"]')).toBeTruthy()
     expect(screen.getByText("search").closest('[data-slot="toolcall"]')).toBeTruthy()
     expect(screen.getByText("const answer = 42").closest('[data-slot="artifact-code"]')).toBeTruthy()
+  })
+
+  it("renders runtime attachment parts through the stable attachment slot", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "p1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByRole("link", { name: "report.pdf" })).toHaveAttribute(
+      "href",
+      "https://example.com/report.pdf",
+    )
+    expect(screen.getByRole("link", { name: "report.pdf" }).closest('[data-slot="attachment-part"]')).toBeTruthy()
   })
 
   it("throws when useChatRuntime is used outside ChatRoot", () => {

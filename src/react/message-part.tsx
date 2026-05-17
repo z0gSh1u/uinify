@@ -1,7 +1,8 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { UiMessagePart } from "../model/types"
-import { ArtifactCodeBlock } from "./artifact-code-block"
+import { AttachmentPart } from "./attachment-part"
+import { ArtifactContainer } from "./artifact-container"
 import { ImagePart } from "./image-part"
 import { ReasoningBlock } from "./reasoning-block"
 import { useRenderers } from "./renderers"
@@ -47,12 +48,14 @@ export function MessagePart({ part }: MessagePartProps) {
       return (
         <div data-kind={part.artifact.kind} data-slot="message-part" data-state="complete" data-type="artifact">
           <div data-kind={part.artifact.kind} data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}>
-            {part.artifact.kind === "code" && renderers.renderArtifactCode ? (
-              <>{renderers.renderArtifactCode({ part })}</>
-            ) : (
-              <ArtifactCodeBlock part={part} />
-            )}
+            <ArtifactContainer part={part} />
           </div>
+        </div>
+      )
+    case "attachment":
+      return (
+        <div data-slot="message-part" data-state={part.attachment.status} data-type="attachment">
+          <AttachmentPart part={part} />
         </div>
       )
     default: {

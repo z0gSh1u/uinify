@@ -1,4 +1,4 @@
-import type { UiArtifact, UiMessageRole, UiToolCallPart } from "../model/types"
+import type { UiArtifact, UiAttachment, UiMessageRole, UiToolCallPart } from "../model/types"
 
 export type UiStreamEvent =
   | {
@@ -41,4 +41,10 @@ export type UiStreamEvent =
       messageId: string
       partId: string
       artifact: UiArtifact
+    }
+  | {
+      type: "part.attachment.updated"
+      messageId: string
+      partId: string
+      attachment: UiAttachment
     }

@@ -1,7 +1,18 @@
 export {
+  ArtifactBody,
+  getDefaultArtifactView,
+  renderDefaultArtifactBody,
+  type ArtifactBodyProps,
+} from "./artifact-body"
+export {
   ArtifactCodeBlock,
   type ArtifactCodeBlockProps,
 } from "./artifact-code-block"
+export {
+  ArtifactContainer,
+  type ArtifactContainerProps,
+} from "./artifact-container"
+export { AttachmentPart, type AttachmentPartProps } from "./attachment-part"
 export { AttachmentTray, type AttachmentTrayProps } from "./attachment-tray"
 export {
   ChatRoot,
@@ -22,7 +33,7 @@ export {
 } from "./reasoning-block"
 export {
   RenderersProvider,
-  type ArtifactCodeRendererProps,
+  type ArtifactRendererProps,
   type MessageRendererOverrides,
   type ReasoningRendererProps,
   type ToolCallRendererProps,
