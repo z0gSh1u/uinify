@@ -11,7 +11,11 @@ const customRenderers: MessageRendererOverrides = {
       {part.outputSummary ? <p>{part.outputSummary}</p> : null}
     </div>
   ),
-  renderArtifactCode: ({ part }) => <div>Custom artifact: {part.artifact.content}</div>,
+  renderArtifactCode: ({ part }) => (
+    <div>
+      Custom code artifact ({part.artifact.language ?? "code"}): {part.artifact.content}
+    </div>
+  ),
 }
 
 function ExampleScenario({ fixture }: { fixture: ExampleFixture }) {

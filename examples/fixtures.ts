@@ -132,8 +132,9 @@ export const exampleFixtures: ExampleFixture[] = [
         partId: "custom-assistant-artifact",
         artifact: {
           id: "custom-adapter-artifact",
-          kind: "text",
-          content: "Custom renderers can highlight adapted runtime state.",
+          kind: "code",
+          language: "ts",
+          content: "runtime.dispatch(mapHostEvent(hostEvent))",
         },
       },
       { type: "message.completed", messageId: "custom-assistant" },

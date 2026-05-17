@@ -30,6 +30,7 @@
   ],
   "scripts": {
     "build": "tsup --config tsup.config.ts && node scripts/copy-styles.mjs",
+    "build:example": "vite build --config vite.config.ts --outDir dist-example examples/playground",
     "dev:example": "vite --config vite.config.ts examples/playground/index.html",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
