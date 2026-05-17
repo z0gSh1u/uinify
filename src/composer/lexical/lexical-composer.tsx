@@ -50,6 +50,7 @@ export function LexicalComposer({
 }: LexicalComposerProps) {
   const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
+  const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
   const [attachments, setAttachments] = useState(initialAttachments)
   const [activeToken, setActiveToken] = useState("")
   const attachmentHandlers = useMemo(
@@ -61,18 +62,13 @@ export function LexicalComposer({
 
   const replaceActiveToken = (insertText: string) => {
     const state = getActiveTokenState()
-    const range = state.range
+    const range = state.range ?? lastActiveTokenStateRef.current.range
 
     if (!range) {
-      return insertText
+      return replaceTokenInSnapshot(text, state.token || activeToken || lastActiveTokenStateRef.current.token, insertText)
     }
 
-    const prefix = text.slice(0, range.start)
-    const suffix = text.slice(range.end)
-    const normalizedSuffix =
-      insertText.endsWith(" ") && /^\s/.test(suffix) ? suffix.replace(/^\s+/, "") : suffix
-
-    return `${prefix}${insertText}${normalizedSuffix}`
+    return replaceTokenInSnapshotAtRange(text, range, insertText)
   }
 
   const updateEditorToken = (insertText: string) => {
@@ -156,7 +152,12 @@ export function LexicalComposer({
     editorRef.current?.update(() => {
       const root = $getRoot()
       root.clear()
-      root.append($createParagraphNode().append($createTextNode(nextText)))
+
+      const paragraphs = nextText.split("\n\n")
+
+      for (const paragraphText of paragraphs) {
+        root.append($createParagraphNode().append($createTextNode(paragraphText)))
+      }
     })
   }
 
@@ -220,7 +221,15 @@ export function LexicalComposer({
             })
           }}
         />
-        <ActiveTokenPlugin onChange={setActiveToken} />
+        <ActiveTokenPlugin
+          onChange={(state) => {
+            setActiveToken(state.token)
+
+            if (state.token.length > 0 && state.range) {
+              lastActiveTokenStateRef.current = state
+            }
+          }}
+        />
       </BaseComposer>
 
       <SlashCommandPlugin items={slashCommands} onSelect={insertChoice} query={activeToken} />
@@ -246,13 +255,13 @@ export function LexicalComposer({
   )
 }
 
-function ActiveTokenPlugin({ onChange }: { onChange: (token: string) => void }) {
+function ActiveTokenPlugin({ onChange }: { onChange: (state: ActiveTokenState) => void }) {
   const [editor] = useLexicalComposerContext()
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        onChange(readActiveTokenState(editor).token)
+        onChange(readActiveTokenState(editor))
       })
     })
   }, [editor, onChange])
@@ -321,7 +330,7 @@ function readActiveTokenState(editor: LexicalEditor | null): ActiveTokenState {
         break
       }
 
-      documentOffset += previousParagraph.getTextContentSize() + 1
+      documentOffset += previousParagraph.getTextContentSize() + 2
     }
 
     token = nextToken
@@ -332,6 +341,43 @@ function readActiveTokenState(editor: LexicalEditor | null): ActiveTokenState {
   })
 
   return { token, range }
+}
+
+function replaceTokenInSnapshot(text: string, token: string, insertText: string) {
+  return replaceTokenInSnapshotAtRange(text, findFallbackRange(text, token), insertText)
+}
+
+function replaceTokenInSnapshotAtRange(
+  text: string,
+  range: ActiveTokenRange | null,
+  insertText: string,
+) {
+  if (!range) {
+    return insertText
+  }
+
+  const prefix = text.slice(0, range.start)
+  const suffix = text.slice(range.end)
+  const normalizedSuffix = insertText.endsWith(" ") && /^\s/.test(suffix) ? suffix.replace(/^\s+/, "") : suffix
+
+  return `${prefix}${insertText}${normalizedSuffix}`
+}
+
+function findFallbackRange(text: string, token: string): ActiveTokenRange | null {
+  if (token.length === 0) {
+    return null
+  }
+
+  const tokenIndex = text.lastIndexOf(token)
+
+  if (tokenIndex === -1) {
+    return null
+  }
+
+  return {
+    start: tokenIndex,
+    end: tokenIndex + token.length,
+  }
 }
 
 function EditorRefPlugin({ onReady }: { onReady: (editor: LexicalEditor) => void }) {

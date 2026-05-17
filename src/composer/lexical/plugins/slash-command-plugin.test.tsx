@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { act } from "react"
 import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $setSelection,
   type LexicalEditor,
   type TextNode,
 } from "lexical"
@@ -171,6 +172,38 @@ describe("SlashCommandPlugin", () => {
     })
 
     await user.click(screen.getByRole("button", { name: "agent" }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("First line\n\nSecond /agent line")
+    })
+  })
+
+  it("preserves multi-paragraph structure in the fallback path when selection is lost", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <LexicalComposer
+        onSubmit={() => undefined}
+        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorParagraphsWithCaret(textbox, ["First line", "Second /ag line"], 1, 10)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "agent" })).toBeInTheDocument()
+    })
+
+    const button = screen.getByRole("button", { name: "agent" })
+
+    act(() => {
+      getEditor(textbox)?.update(() => {
+        $setSelection(null)
+      })
+      fireEvent.click(button)
+    })
 
     await waitFor(() => {
       expect(getEditorText(textbox)).toBe("First line\n\nSecond /agent line")
