@@ -33,9 +33,9 @@ export function MessagePart({ part }: MessagePartProps) {
       )
     case "artifact":
       return renderers.renderArtifactCode ? (
-        <>{renderers.renderArtifactCode({ artifact: part.artifact })}</>
+        <>{renderers.renderArtifactCode({ part })}</>
       ) : (
-        <ArtifactCodeBlock artifact={part.artifact} />
+        <ArtifactCodeBlock part={part} />
       )
     default: {
       const exhaustiveCheck: never = part

@@ -103,6 +103,25 @@ describe("MessagePart", () => {
     expect(screen.getByText("const value = 1")).toBeInTheDocument()
   })
 
+  it("renders plain text artifact previews", () => {
+    render(
+      <MessagePart
+        part={{
+          id: "artifact-plain-1",
+          kind: "artifact",
+          artifact: {
+            id: "artifact-text-plain-1",
+            kind: "text",
+            content: "Plain text artifact preview",
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByText("text")).toBeInTheDocument()
+    expect(screen.getByText("Plain text artifact preview")).toBeInTheDocument()
+  })
+
   it("uses renderer overrides for reasoning, tool calls, and artifacts", () => {
     const renderReasoning = vi.fn(() => <div>Custom reasoning</div>)
     const renderToolCall = vi.fn(() => <div>Custom tool call</div>)
@@ -154,5 +173,6 @@ describe("MessagePart", () => {
     expect(renderReasoning).toHaveBeenCalledTimes(1)
     expect(renderToolCall).toHaveBeenCalledTimes(1)
     expect(renderArtifactCode).toHaveBeenCalledTimes(1)
+    expect(renderArtifactCode).toHaveBeenCalledWith({ part: parts[2] })
   })
 })

@@ -1,10 +1,11 @@
-import type { UiArtifact } from "../model/types"
+import type { UiArtifactPart } from "../model/types"
 
 export type ArtifactCodeBlockProps = {
-  artifact: UiArtifact
+  part: UiArtifactPart
 }
 
-export function ArtifactCodeBlock({ artifact }: ArtifactCodeBlockProps) {
+export function ArtifactCodeBlock({ part }: ArtifactCodeBlockProps) {
+  const { artifact } = part
   const label = artifact.kind === "code" ? artifact.language ?? "code" : "text"
 
   return (

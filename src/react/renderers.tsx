@@ -1,5 +1,5 @@
 import { createContext, useContext, type PropsWithChildren, type ReactNode } from "react"
-import type { UiArtifact, UiReasoningPart, UiToolCallPart } from "../model/types"
+import type { UiArtifactPart, UiReasoningPart, UiToolCallPart } from "../model/types"
 
 export type ReasoningRendererProps = {
   part: UiReasoningPart
@@ -10,7 +10,7 @@ export type ToolCallRendererProps = {
 }
 
 export type ArtifactCodeRendererProps = {
-  artifact: UiArtifact
+  part: UiArtifactPart
 }
 
 export type MessageRendererOverrides = {
