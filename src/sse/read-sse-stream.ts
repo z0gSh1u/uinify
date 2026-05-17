@@ -8,17 +8,36 @@ export async function* readSSEStream(
   let buffer = ""
   let lines: string[] = []
 
-  while (true) {
-    const { done, value } = await reader.read()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
 
-    if (done) {
-      break
+      if (done) {
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+
+      const parsed = extractLines(buffer)
+      buffer = parsed.remainder
+
+      for (const line of parsed.lines) {
+        const event = parseEventLines(lines, line)
+
+        if (event) {
+          yield event
+        }
+
+        if (line.length === 0) {
+          lines = []
+        } else {
+          lines.push(line)
+        }
+      }
     }
 
-    buffer += decoder.decode(value, { stream: true })
-
-    const parsed = extractLines(buffer)
-    buffer = parsed.remainder
+    buffer += decoder.decode()
+    const parsed = extractLines(buffer, true)
 
     for (const line of parsed.lines) {
       const event = parseEventLines(lines, line)
@@ -33,35 +52,20 @@ export async function* readSSEStream(
         lines.push(line)
       }
     }
-  }
 
-  buffer += decoder.decode()
-  const parsed = extractLines(buffer, true)
-
-  for (const line of parsed.lines) {
-    const event = parseEventLines(lines, line)
-
-    if (event) {
-      yield event
+    if (parsed.remainder.length > 0) {
+      lines.push(parsed.remainder)
     }
 
-    if (line.length === 0) {
-      lines = []
-    } else {
-      lines.push(line)
+    if (lines.length > 0) {
+      const event = parseEventChunk(lines.join("\n"))
+
+      if (event) {
+        yield event
+      }
     }
-  }
-
-  if (parsed.remainder.length > 0) {
-    lines.push(parsed.remainder)
-  }
-
-  if (lines.length > 0) {
-    const event = parseEventChunk(lines.join("\n"))
-
-    if (event) {
-      yield event
-    }
+  } finally {
+    reader.releaseLock()
   }
 }
 

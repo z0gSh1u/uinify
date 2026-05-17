@@ -116,4 +116,25 @@ describe("readSSEStream", () => {
 
     expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
   })
+
+  it("releases the reader when iteration stops early", async () => {
+    let cancelReason: unknown
+
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new TextEncoder().encode("event: token\ndata: {\"delta\":\"hi\"}\n\n"))
+      },
+      cancel(reason) {
+        cancelReason = reason
+      },
+    })
+
+    for await (const event of readSSEStream(stream)) {
+      expect(event).toEqual({ event: "token", data: '{"delta":"hi"}' })
+      break
+    }
+
+    expect(stream.locked).toBe(false)
+    expect(cancelReason).toBeUndefined()
+  })
 })
