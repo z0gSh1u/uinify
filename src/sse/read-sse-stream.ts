@@ -15,16 +15,17 @@ export async function* readSSEStream(
     }
 
     buffer += decoder.decode(value, { stream: true })
+    buffer = buffer.replaceAll("\r\n", "\n")
 
     const chunks = buffer.split("\n\n")
     buffer = chunks.pop() ?? ""
 
     for (const chunk of chunks) {
       const lines = chunk.split("\n")
-      const event = lines.find((line) => line.startsWith("event:"))?.replace("event:", "").trim() ?? "message"
+      const event = lines.find((line) => line.startsWith("event:"))?.slice(6).replace(/^ /, "") ?? "message"
       const data = lines
         .filter((line) => line.startsWith("data:"))
-        .map((line) => line.replace("data:", "").trim())
+        .map((line) => line.slice(5).replace(/^ /, ""))
         .join("\n")
 
       yield { event, data }
