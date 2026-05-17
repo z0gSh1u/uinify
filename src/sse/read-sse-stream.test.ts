@@ -117,7 +117,8 @@ describe("readSSEStream", () => {
     expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
   })
 
-  it("releases the reader when iteration stops early", async () => {
+  it("cancels the reader when iteration stops early", async () => {
+    let cancelCalls = 0
     let cancelReason: unknown
 
     const stream = new ReadableStream<Uint8Array>({
@@ -125,6 +126,7 @@ describe("readSSEStream", () => {
         controller.enqueue(new TextEncoder().encode("event: token\ndata: {\"delta\":\"hi\"}\n\n"))
       },
       cancel(reason) {
+        cancelCalls += 1
         cancelReason = reason
       },
     })
@@ -135,6 +137,23 @@ describe("readSSEStream", () => {
     }
 
     expect(stream.locked).toBe(false)
+    expect(cancelCalls).toBe(1)
     expect(cancelReason).toBeUndefined()
+  })
+
+  it("ignores frames that do not contain any data lines", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("event: token\n\nevent: token\ndata: {\"delta\":\"hi\"}\n\n"))
+        controller.close()
+      },
+    })
+
+    const events = []
+    for await (const event of readSSEStream(stream)) {
+      events.push(event)
+    }
+
+    expect(events).toEqual([{ event: "token", data: '{"delta":"hi"}' }])
   })
 })

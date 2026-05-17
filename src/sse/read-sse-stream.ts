@@ -7,6 +7,7 @@ export async function* readSSEStream(
   const decoder = new TextDecoder()
   let buffer = ""
   let lines: string[] = []
+  let shouldCancelReader = true
 
   try {
     while (true) {
@@ -64,7 +65,13 @@ export async function* readSSEStream(
         yield event
       }
     }
+
+    shouldCancelReader = false
   } finally {
+    if (shouldCancelReader) {
+      await reader.cancel()
+    }
+
     reader.releaseLock()
   }
 }
@@ -116,9 +123,14 @@ function parseEventChunk(chunk: string): UiSSEEvent | null {
     return null
   }
 
+  const dataLines = lines.filter((line) => line.startsWith("data:"))
+
+  if (dataLines.length === 0) {
+    return null
+  }
+
   const event = lines.find((line) => line.startsWith("event:"))?.slice(6).replace(/^ /, "") ?? "message"
-  const data = lines
-    .filter((line) => line.startsWith("data:"))
+  const data = dataLines
     .map((line) => line.slice(5).replace(/^ /, ""))
     .join("\n")
 
