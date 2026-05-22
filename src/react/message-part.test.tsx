@@ -269,6 +269,39 @@ describe("MessagePart", () => {
     expect(screen.getByText("Plain text artifact preview")).toBeInTheDocument()
   })
 
+  it("renders json artifacts through the shared container path", () => {
+    render(
+      <MessagePart
+        part={{
+          id: "artifact-json-1",
+          kind: "artifact",
+          artifact: {
+            id: "artifact-json-view-1",
+            kind: "json",
+            title: "JSON preview",
+            defaultViewId: "json",
+            views: [
+              {
+                id: "json",
+                label: "JSON",
+                kind: "preview",
+                value: '{"title":"Demo","count":2}',
+              },
+            ],
+          },
+        }}
+      />,
+    )
+
+    const container = screen.getByText("JSON preview").closest('[data-slot="artifact-container"]')
+
+    expect(screen.getByText("JSON preview")).toBeInTheDocument()
+    expect(container?.querySelector('[data-slot="artifact-body"] pre')?.textContent).toBe(
+      '{\n  "title": "Demo",\n  "count": 2\n}',
+    )
+    expect(screen.getByText("JSON preview").closest('[data-slot="artifact-text"]')).toBeTruthy()
+  })
+
   it("renders unknown artifact kinds with the default body through the shared container path", () => {
     render(
       <MessagePart

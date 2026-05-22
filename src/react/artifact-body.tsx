@@ -11,6 +11,8 @@ export function getDefaultArtifactView(artifact: UiArtifact) {
   return artifact.views.find((view) => view.id === artifact.defaultViewId) ?? artifact.views[0]
 }
 
+type DefaultArtifactRendererProps = Pick<ArtifactRendererProps, "view"> & Partial<ArtifactRendererProps>
+
 function getViewContent(view: UiArtifactView): string {
   if (typeof view.value === "string") {
     return view.value
@@ -20,6 +22,18 @@ function getViewContent(view: UiArtifactView): string {
     return JSON.stringify(view.value, null, 2)
   } catch {
     return "[structured artifact view unavailable]"
+  }
+}
+
+function getJsonContent(view: UiArtifactView): string {
+  if (typeof view.value !== "string") {
+    return getViewContent(view)
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(view.value), null, 2)
+  } catch {
+    return view.value
   }
 }
 
@@ -34,14 +48,27 @@ function getArtifactRenderer(
   return artifactRegistry[artifactKind]
 }
 
-export function renderDefaultArtifactBody({ view }: ArtifactRendererProps) {
+export function renderDefaultArtifactBody({ artifact, view }: DefaultArtifactRendererProps) {
   const content = getViewContent(view)
+  const artifactKind = artifact?.kind
 
-  return (
-    <pre>
-      {view.kind === "source" ? <code>{content}</code> : content}
-    </pre>
-  )
+  if (artifactKind === "code" || view.kind === "source") {
+    return (
+      <pre>
+        <code>{content}</code>
+      </pre>
+    )
+  }
+
+  if (artifactKind === "json") {
+    return <pre>{getJsonContent(view)}</pre>
+  }
+
+  if (artifactKind === "text" && typeof view.value === "string") {
+    return <div style={{ whiteSpace: "pre-wrap" }}>{content}</div>
+  }
+
+  return <pre>{content}</pre>
 }
 
 export function ArtifactBody({ artifact, part, view }: ArtifactBodyProps) {

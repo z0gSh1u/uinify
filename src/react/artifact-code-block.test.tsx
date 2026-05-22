@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
+import { renderDefaultArtifactBody } from "./artifact-body"
 import { ArtifactCodeBlock } from "./artifact-code-block"
 
 describe("ArtifactCodeBlock", () => {
@@ -97,5 +98,25 @@ describe("ArtifactCodeBlock", () => {
 
     expect(screen.getByText("Structured")).toBeInTheDocument()
     expect(screen.getByText("[structured artifact view unavailable]")).toBeInTheDocument()
+  })
+
+  it("keeps renderDefaultArtifactBody compatible with legacy callers that pass only view", () => {
+    expect(() =>
+      render(
+        <>{
+          renderDefaultArtifactBody({
+            view: {
+              id: "source",
+              label: "Source",
+              kind: "source",
+              language: "ts",
+              value: "const legacy = true",
+            },
+          })
+        }</>,
+      ),
+    ).not.toThrow()
+
+    expect(screen.getByText("const legacy = true").closest("code")).toBeTruthy()
   })
 })

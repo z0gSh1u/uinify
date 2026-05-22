@@ -153,6 +153,65 @@ describe("ArtifactContainer", () => {
     expect(screen.queryByTestId("artifact-body")).not.toBeInTheDocument()
   })
 
+  it("renders code artifacts in a code block by default", () => {
+    render(<ArtifactContainer part={createPart()} />)
+
+    const container = screen.getByText("Build output").closest('[data-slot="artifact-container"]')
+
+    expect(container?.querySelector('[data-slot="artifact-body"] pre code')?.textContent).toBe("Rendered preview")
+  })
+
+  it("renders text artifacts as readable plain text by default", () => {
+    render(
+      <ArtifactContainer
+        part={createPart({
+          kind: "text",
+          defaultViewId: "plain-text",
+          views: [
+            {
+              id: "plain-text",
+              label: "Text",
+              kind: "preview",
+              value: "Line one\nLine two",
+            },
+          ],
+        })}
+      />,
+    )
+
+    const container = screen.getByText("Build output").closest('[data-slot="artifact-container"]')
+    const body = container?.querySelector('[data-slot="artifact-body"]')
+
+    expect(body?.textContent).toBe("Line one\nLine two")
+    expect(body?.querySelector("pre")).toBeNull()
+    expect(body?.querySelector('div')?.style.whiteSpace).toBe("pre-wrap")
+  })
+
+  it("formats json artifacts by default", () => {
+    render(
+      <ArtifactContainer
+        part={createPart({
+          kind: "json",
+          defaultViewId: "json",
+          views: [
+            {
+              id: "json",
+              label: "JSON",
+              kind: "preview",
+              value: '{"title":"Demo","count":2}',
+            },
+          ],
+        })}
+      />,
+    )
+
+    const container = screen.getByText("Build output").closest('[data-slot="artifact-container"]')
+
+    expect(container?.querySelector('[data-slot="artifact-body"] pre')?.textContent).toBe(
+      '{\n  "title": "Demo",\n  "count": 2\n}',
+    )
+  })
+
   it("renders structured object views with the default body fallback", () => {
     render(
       <ArtifactContainer
