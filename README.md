@@ -1,6 +1,6 @@
 # uinify
 
-`uinify` is a small chat UI foundation for consumers who want to keep backend protocol handling outside the UI layer. You map host or backend events into `UiStreamEvent`, dispatch them into a runtime, and render the conversation with React.
+`uinify` is a small chat UI foundation for consumers who want to keep backend protocol handling outside the UI layer. You map host or backend events into `UiStreamEvent`, or wrap that mapper with the stable adapter helpers, dispatch them into a runtime, and render the conversation with React.
 
 ## Install
 
@@ -14,10 +14,13 @@ For early adoption, start with this narrow recommended surface:
 
 - `createChatRuntime` from `uinify`
 - `UiStreamEvent` from `uinify`
+- `createAdapterRunner` from `uinify` when your mapper needs a stable shared contract with diagnostics
 - `ChatRoot` from `uinify/react`
 - `MessageList` from `uinify/react`
 
 These are the pieces used by the getting-started and stream-mapping guides.
+
+`createAdapterResult` and `validateAdapterEvents` are also exported from `uinify` as lower-level adapter helpers when you need to build your own wrapper around that contract.
 
 For first-time adoption, the recommended default setup is to import `uinify/styles.css` once near your app entrypoint.
 
