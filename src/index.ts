@@ -1,5 +1,6 @@
 export * from "./model/types"
 export * from "./adapters/contracts"
+export * from "./adapters/run-adapter-step"
 export * from "./adapters/validate-events"
 export * from "./runtime/events"
 export * from "./runtime/apply-stream-event"

@@ -3,6 +3,7 @@ import type { UiAdapterDiagnostic } from "./contracts"
 
 type ValidateAdapterEventsInput = {
   diagnostics?: UiAdapterDiagnostic[]
+  knownStartedMessageIds?: Iterable<string>
 }
 
 const MESSAGE_START_REQUIRED_EVENT_TYPES: UiStreamEvent["type"][] = [
@@ -31,7 +32,7 @@ export function validateAdapterEvents(
     return diagnostics
   }
 
-  const startedMessageIds = new Set<string>()
+  const startedMessageIds = new Set(input.knownStartedMessageIds)
 
   for (const event of events) {
     if (event.type === "message.started") {

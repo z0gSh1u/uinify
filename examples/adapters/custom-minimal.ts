@@ -1,4 +1,4 @@
-import type { UiStreamEvent } from "../../src"
+import { createAdapterRunner, type UiStreamEvent } from "../../src"
 
 type CustomMinimalStartEvent = {
   kind: "begin"
@@ -49,3 +49,5 @@ export function mapCustomMinimalEvent(event: CustomMinimalEvent): UiStreamEvent[
       ]
   }
 }
+
+export const adaptCustomMinimalEvent = createAdapterRunner(mapCustomMinimalEvent)

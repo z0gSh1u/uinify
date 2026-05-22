@@ -1,4 +1,4 @@
-import type { UiArtifact, UiArtifactMetadataValue, UiArtifactView, UiMessageRole, UiStreamEvent } from "../../src"
+import { createAdapterRunner, type UiArtifact, type UiArtifactMetadataValue, type UiArtifactView, type UiMessageRole, type UiStreamEvent } from "../../src"
 
 type OpenAiLikeResponseStartedChunk = {
   type: "response.started"
@@ -177,3 +177,5 @@ export function mapOpenAiLikeChunk(chunk: OpenAiLikeChunk): UiStreamEvent[] {
       ]
   }
 }
+
+export const adaptOpenAiLikeChunk = createAdapterRunner(mapOpenAiLikeChunk)

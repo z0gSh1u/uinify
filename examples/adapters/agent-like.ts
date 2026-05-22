@@ -1,4 +1,4 @@
-import type { UiArtifact, UiArtifactMetadataValue, UiArtifactView, UiMessageRole, UiStreamEvent } from "../../src"
+import { createAdapterRunner, type UiArtifact, type UiArtifactMetadataValue, type UiArtifactView, type UiMessageRole, type UiStreamEvent } from "../../src"
 
 type AgentLikeMessageStartedEvent = {
   type: "agent.message.started"
@@ -180,3 +180,5 @@ export function mapAgentLikeEvent(event: AgentLikeEvent): UiStreamEvent[] {
       ]
   }
 }
+
+export const adaptAgentLikeEvent = createAdapterRunner(mapAgentLikeEvent)

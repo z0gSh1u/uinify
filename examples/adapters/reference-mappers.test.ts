@@ -1,11 +1,24 @@
 import { createChatRuntime, type UiStreamEvent } from "../../src"
 import { describe, expect, it } from "vitest"
-import { mapAgentLikeEvent, type AgentLikeEvent } from "./agent-like"
-import { mapCustomMinimalEvent } from "./custom-minimal"
+import { adaptAgentLikeEvent, mapAgentLikeEvent, type AgentLikeEvent } from "./agent-like"
+import { adaptCustomMinimalEvent, mapCustomMinimalEvent } from "./custom-minimal"
 import { agentLikeFixture, customMinimalFixture, openAiLikeFixture } from "./protocol-fixtures"
-import { mapOpenAiLikeChunk } from "./openai-like"
+import { adaptOpenAiLikeChunk, mapOpenAiLikeChunk } from "./openai-like"
 
 describe("OpenAI-like reference mapper", () => {
+  it("exposes a recipe helper that returns events and diagnostics", () => {
+    expect(adaptOpenAiLikeChunk(openAiLikeFixture[0])).toEqual({
+      events: [
+        {
+          type: "message.started",
+          messageId: "msg_openai_like_1",
+          role: "assistant",
+        },
+      ],
+      diagnostics: [],
+    })
+  })
+
   it("maps a streaming protocol fixture into canonical UiStreamEvent values", () => {
     const mappedEvents = openAiLikeFixture.flatMap(mapOpenAiLikeChunk)
 
@@ -133,9 +146,87 @@ describe("OpenAI-like reference mapper", () => {
       },
     ])
   })
+
+  it("dispatches recipe helper result.events into the runtime", () => {
+    const runtime = createChatRuntime({ conversationId: "reference-mapper-recipe-example" })
+
+    for (const chunk of openAiLikeFixture) {
+      const result = adaptOpenAiLikeChunk(chunk)
+
+      for (const event of result.events) {
+        runtime.dispatch(event)
+      }
+    }
+
+    expect(runtime.getState().messages).toEqual([
+      {
+        id: "msg_openai_like_1",
+        role: "assistant",
+        state: "complete",
+        feedback: "none",
+        parts: [
+          {
+            id: "text_openai_like_1",
+            kind: "text",
+            text: "Hello world!",
+          },
+          {
+            id: "tool_openai_like_1",
+            kind: "tool-call",
+            toolName: "searchDocs",
+            status: "complete",
+            inputSummary: "query: reference mappers",
+            outputSummary: "3 results returned",
+          },
+          {
+            id: "artifact_openai_like_1",
+            kind: "artifact",
+            artifact: {
+              id: "artifact_openai_like_1",
+              kind: "code",
+              title: "Reference mapper example",
+              metadata: {
+                runnable: true,
+                sourceProtocol: "openai-like",
+              },
+              defaultViewId: "source",
+              views: [
+                {
+                  id: "source",
+                  label: "TypeScript",
+                  kind: "source",
+                  language: "ts",
+                  value: "export const mapped = true\n",
+                },
+                {
+                  id: "preview",
+                  label: "Preview",
+                  kind: "preview",
+                  value: "mapped = true",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ])
+  })
 })
 
 describe("Agent-like reference mapper", () => {
+  it("exposes a recipe helper that returns events and diagnostics", () => {
+    expect(adaptAgentLikeEvent(agentLikeFixture[0])).toEqual({
+      events: [
+        {
+          type: "message.started",
+          messageId: "agent_msg_1",
+          role: "assistant",
+        },
+      ],
+      diagnostics: [],
+    })
+  })
+
   it("maps tool lifecycle updates for started and failed branches", () => {
     expect(
       ([
@@ -189,8 +280,12 @@ describe("Agent-like reference mapper", () => {
   it("dispatches mapped workflow events into the runtime and preserves the final assistant state", () => {
     const runtime = createChatRuntime({ conversationId: "reference-mapper-agent-example" })
 
-    for (const event of agentLikeFixture.flatMap(mapAgentLikeEvent)) {
-      runtime.dispatch(event)
+    for (const input of agentLikeFixture) {
+      const result = adaptAgentLikeEvent(input)
+
+      for (const event of result.events) {
+        runtime.dispatch(event)
+      }
     }
 
     expect(runtime.getState().messages).toEqual([
@@ -252,6 +347,77 @@ describe("Agent-like reference mapper", () => {
 })
 
 describe("Custom minimal reference mapper", () => {
+  it("exposes a recipe helper that preserves known message starts across calls", () => {
+    expect(
+      adaptCustomMinimalEvent({
+        kind: "begin",
+        id: "custom_min_msg_stateful",
+      }),
+    ).toEqual({
+      events: [
+        {
+          type: "message.started",
+          messageId: "custom_min_msg_stateful",
+          role: "assistant",
+        },
+      ],
+      diagnostics: [],
+    })
+
+    expect(
+      adaptCustomMinimalEvent({
+        kind: "end",
+        id: "custom_min_msg_stateful",
+      }),
+    ).toEqual({
+      events: [
+        {
+          type: "message.completed",
+          messageId: "custom_min_msg_stateful",
+        },
+      ],
+      diagnostics: [],
+    })
+
+    expect(
+      adaptCustomMinimalEvent({
+        kind: "text",
+        id: "custom_min_msg_stateful",
+        partId: "custom_min_part_stateful",
+        text: "Reused ids should warn again after completion.",
+      }),
+    ).toEqual({
+      events: [
+        {
+          type: "part.text.delta",
+          messageId: "custom_min_msg_stateful",
+          partId: "custom_min_part_stateful",
+          delta: "Reused ids should warn again after completion.",
+        },
+      ],
+      diagnostics: [
+        {
+          level: "warning",
+          code: "missing-message-start",
+          message: 'Event "part.text.delta" arrived before "message.started" for message "custom_min_msg_stateful".',
+        },
+      ],
+    })
+  })
+
+  it("exposes a recipe helper that returns events and diagnostics", () => {
+    expect(adaptCustomMinimalEvent(customMinimalFixture[0])).toEqual({
+      events: [
+        {
+          type: "message.started",
+          messageId: "custom_min_msg_1",
+          role: "assistant",
+        },
+      ],
+      diagnostics: [],
+    })
+  })
+
   it("uses the explicit part id carried by the protocol", () => {
     expect(
       mapCustomMinimalEvent({
@@ -286,6 +452,34 @@ describe("Custom minimal reference mapper", () => {
       {
         type: "message.completed",
         messageId: "custom_min_msg_1",
+      },
+    ])
+  })
+
+  it("dispatches recipe helper result.events into the runtime", () => {
+    const runtime = createChatRuntime({ conversationId: "reference-mapper-custom-minimal-recipe-example" })
+
+    for (const input of customMinimalFixture) {
+      const result = adaptCustomMinimalEvent(input)
+
+      for (const event of result.events) {
+        runtime.dispatch(event)
+      }
+    }
+
+    expect(runtime.getState().messages).toEqual([
+      {
+        id: "custom_min_msg_1",
+        role: "assistant",
+        state: "complete",
+        feedback: "none",
+        parts: [
+          {
+            id: "custom_min_text_1",
+            kind: "text",
+            text: "Mapped from a tiny host protocol.",
+          },
+        ],
       },
     ])
   })
