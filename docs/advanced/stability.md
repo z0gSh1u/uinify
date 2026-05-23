@@ -16,6 +16,16 @@ This is the recommended surface because it matches the public exports and the do
 
 `createAdapterResult` and `validateAdapterEvents` are part of the public package root, but they are lower-level helpers for custom adapter wrappers rather than the default adoption path.
 
+## Stable Styling Hooks
+
+For styling and theming, prefer the documented hooks in this order:
+
+- CSS custom properties under the `--uinify-*` namespace in `uinify/styles.css`
+- Stable `data-slot` regions such as `message`, `message-parts`, `message-actions`, `part-actions`, `artifact-container`, `artifact-tabs`, `artifact-views`, `attachment-tray`, `attachment-actions`, and `attachment-part`
+- `slotClassNames` keys that map directly to those documented stable regions
+
+Prefer tokens first, then stable slots and `slotClassNames`, and replace renderers only when the default structure is the wrong product shape rather than merely the wrong visual treatment.
+
 ## Reference-only Surface
 
 Some code in the repository is intentionally useful as a reference, but it should not be treated as a stable integration contract.
