@@ -24,7 +24,7 @@ export function Message({ message, onFeedback }: MessageProps) {
       data-state={message.state}
     >
       <CurrentMessageProvider message={message}>
-        <div className={slotClassNames.messageParts} data-slot="message-parts">
+        <div className={slotClassNames.messageParts} data-slot="message-parts" data-state={message.state}>
           {message.parts.map((part) => (
             <MessagePart key={part.id} part={part} />
           ))}

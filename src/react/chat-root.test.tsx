@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createChatRuntime } from "../runtime/create-chat-runtime"
+import { AttachmentTray } from "./attachment-tray"
 import { ChatRoot, useChatRuntime } from "./chat-root"
 import { MessageList } from "./message-list"
 
@@ -136,6 +137,100 @@ describe("ChatRoot", () => {
       "https://example.com/report.pdf",
     )
     expect(screen.getByRole("link", { name: "report.pdf" }).closest('[data-slot="attachment-part"]')).toBeTruthy()
+  })
+
+  it("exposes stable slot and state metadata across message, artifact, attachment, and action regions", () => {
+    const runtime = createChatRuntime({ conversationId: "slots" })
+    const file = new File(["hello"], "draft.txt", { type: "text/plain" })
+    const onRemove = vi.fn()
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "text-1", delta: "Hello" })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "artifact-1",
+      artifact: {
+        id: "artifact-1",
+        kind: "code",
+        views: [{ id: "source", label: "Source", kind: "source", language: "ts", value: "const a = 1" }],
+      },
+    })
+    runtime.dispatch({
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "attachment-1",
+        name: "report.pdf",
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime}>
+        <>
+          <MessageList />
+          <AttachmentTray
+            attachments={[
+              {
+                file,
+                id: "composer-attachment-1",
+                mimeType: file.type,
+                name: "draft.txt",
+                size: file.size,
+                status: "uploading",
+              },
+            ]}
+            onRemove={onRemove}
+          />
+        </>
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("Hello").closest('[data-slot="message"]')).toHaveAttribute("data-state", "complete")
+    expect(screen.getByRole("button", { name: "Copy message" }).closest('[data-slot="message-actions"]')).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy text part" }).closest('[data-slot="part-actions"]')).toBeTruthy()
+    expect(screen.getByText("const a = 1").closest('[data-slot="message-part"]')).toHaveAttribute("data-kind", "artifact")
+    expect(screen.getByText("const a = 1").closest('[data-slot="artifact-container"]')).toHaveAttribute("data-kind", "code")
+    expect(screen.getByText("const a = 1").closest('[data-slot="artifact-container"]')).toHaveAttribute("data-state", "ready")
+    expect(screen.getByRole("button", { name: "Source" }).closest('[data-slot="artifact-tabs"]')).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Source" }).closest('[data-slot="artifact-views"]')).toBeTruthy()
+    expect(screen.getByRole("link", { name: "report.pdf" }).closest('[data-slot="attachment-part"]')).toHaveAttribute("data-state", "uploaded")
+    expect(screen.getByText("draft.txt").closest('[data-slot="attachment-tray"]')).toHaveAttribute("data-state", "active")
+    expect(screen.getByRole("button", { name: "Remove attachment" }).closest('[data-slot="attachment-actions"]')).toBeTruthy()
+    expect(screen.getByText("draft.txt").closest('[data-slot="attachment-item"]')).toHaveAttribute("data-state", "uploading")
+  })
+
+  it("matches artifact container metadata to empty artifact view surfaces", () => {
+    const runtime = createChatRuntime({ conversationId: "artifact-empty" })
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "artifact-1",
+      artifact: {
+        id: "artifact-1",
+        kind: "code",
+        defaultViewId: "preview",
+        views: [{ id: "preview", label: "Preview", kind: "preview", value: "" }],
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("This artifact view is empty.").closest('[data-slot="artifact-container"]')).toHaveAttribute(
+      "data-state",
+      "empty",
+    )
   })
 
   it("renders default message and part action rows and calls host callbacks", () => {

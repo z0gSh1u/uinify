@@ -31,21 +31,21 @@ export function MessagePart({ part }: MessagePartProps) {
   switch (part.kind) {
     case "text":
       return (
-        <div data-slot="message-part" data-state="complete" data-type="text">
+        <div data-kind="text" data-slot="message-part" data-state="complete" data-type="text">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
           {renderActions()}
         </div>
       )
     case "image":
       return (
-        <div data-slot="message-part" data-state="complete" data-type="image">
+        <div data-kind="image" data-slot="message-part" data-state="complete" data-type="image">
           <ImagePart part={part} />
           {renderActions()}
         </div>
       )
     case "reasoning":
       return (
-        <div data-slot="message-part" data-state={part.state} data-type="reasoning">
+        <div data-kind="reasoning" data-slot="message-part" data-state={part.state} data-type="reasoning">
           <div data-slot="reasoning" data-state={part.state}>
             {renderers.renderReasoning ? (
               <>{renderers.renderReasoning({ part })}</>
@@ -70,7 +70,7 @@ export function MessagePart({ part }: MessagePartProps) {
       )
     case "tool-call":
       return (
-        <div data-slot="message-part" data-state={part.status} data-type="tool-call">
+        <div data-kind="tool-call" data-slot="message-part" data-state={part.status} data-type="tool-call">
           <div data-slot="toolcall" data-state={part.status}>
             {renderers.renderToolCall ? (
               <>{renderers.renderToolCall({ part })}</>
@@ -95,8 +95,12 @@ export function MessagePart({ part }: MessagePartProps) {
       )
     case "artifact":
       return (
-        <div data-kind={part.artifact.kind} data-slot="message-part" data-state="complete" data-type="artifact">
-          <div data-kind={part.artifact.kind} data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}>
+        <div data-kind="artifact" data-slot="message-part" data-state="complete" data-type="artifact">
+          <div
+            data-kind={part.artifact.kind}
+            data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}
+            data-state="complete"
+          >
             <ArtifactContainer part={part} />
           </div>
           {renderActions()}
@@ -104,7 +108,7 @@ export function MessagePart({ part }: MessagePartProps) {
       )
     case "attachment":
       return (
-        <div data-slot="message-part" data-state={part.attachment.status} data-type="attachment">
+        <div data-kind="attachment" data-slot="message-part" data-state={part.attachment.status} data-type="attachment">
           <AttachmentPart part={part} />
           {renderActions()}
         </div>

@@ -36,36 +36,39 @@ export function ArtifactContainer({ part }: ArtifactContainerProps) {
   const hasCustomRenderer =
     renderers.artifactRegistry?.[artifact.kind] !== undefined || renderers.renderArtifactFallback !== undefined
   const showEmptyViewMessage = isEmptyView && !hasCustomRenderer
+  const containerState = activeView && !showEmptyViewMessage ? "ready" : "empty"
 
   return (
-    <section data-slot="artifact-container">
+    <section data-kind={artifact.kind} data-slot="artifact-container" data-state={containerState}>
       <header data-slot="artifact-header">
-        <div>{heading}</div>
+        <div data-slot="artifact-title">{heading}</div>
         {artifact.views.length > 0 ? (
-          <div data-slot="artifact-views">
-            {artifact.views.map((view) => (
-              <button
-                aria-pressed={view.id === activeView?.id}
-                key={view.id}
-                onClick={() => {
-                  if (view.id === activeView?.id) {
-                    return
-                  }
+          <div data-slot="artifact-tabs">
+            <div data-slot="artifact-views">
+              {artifact.views.map((view) => (
+                <button
+                  aria-pressed={view.id === activeView?.id}
+                  key={view.id}
+                  onClick={() => {
+                    if (view.id === activeView?.id) {
+                      return
+                    }
 
-                  setSelection({ artifact, viewId: view.id })
-                  if (message) {
-                    onPartAction?.({
-                      ...getArtifactViewPayload(part, view.id),
-                      messageId: message.id,
-                      partKind: "artifact",
-                    })
-                  }
-                }}
-                type="button"
-              >
-                {view.label}
-              </button>
-            ))}
+                    setSelection({ artifact, viewId: view.id })
+                    if (message) {
+                      onPartAction?.({
+                        ...getArtifactViewPayload(part, view.id),
+                        messageId: message.id,
+                        partKind: "artifact",
+                      })
+                    }
+                  }}
+                  type="button"
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
       </header>

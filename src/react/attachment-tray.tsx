@@ -39,7 +39,11 @@ export function AttachmentTray({ attachments, onRemove, onRetry }: AttachmentTra
   const visibleAttachments = attachments.filter((attachment) => attachment.status !== "removed")
 
   return (
-    <div data-has-attachments={visibleAttachments.length > 0} data-slot="attachment-tray">
+    <div
+      data-has-attachments={visibleAttachments.length > 0}
+      data-slot="attachment-tray"
+      data-state={visibleAttachments.length > 0 ? "active" : "empty"}
+    >
       {visibleAttachments.map((attachment) => (
         <div
           className={slotClassNames.attachmentItem}
@@ -53,21 +57,23 @@ export function AttachmentTray({ attachments, onRemove, onRetry }: AttachmentTra
 
             return (
               <>
-          <span>{attachment.name}</span>
-          {stageLabel ? <span>{stageLabel}</span> : null}
-          {attachment.progress !== undefined ? <span>{attachment.progress}% uploaded</span> : null}
-          {blockedReason && blockedReason !== stageLabel ? <span>{blockedReason}</span> : null}
-          {attachment.rejection ? <span>This file was rejected before upload.</span> : null}
-          {attachment.status === "error" && onRetry ? (
-            <button onClick={() => onRetry(attachment)} type="button">
-              Retry upload
-            </button>
-          ) : null}
-          {onRemove ? (
-            <button onClick={() => onRemove(attachment.id)} type="button">
-              Remove attachment
-            </button>
-          ) : null}
+                <span>{attachment.name}</span>
+                {stageLabel ? <span>{stageLabel}</span> : null}
+                {attachment.progress !== undefined ? <span>{attachment.progress}% uploaded</span> : null}
+                {blockedReason && blockedReason !== stageLabel ? <span>{blockedReason}</span> : null}
+                {attachment.rejection ? <span>This file was rejected before upload.</span> : null}
+                <div data-slot="attachment-actions">
+                  {attachment.status === "error" && onRetry ? (
+                    <button onClick={() => onRetry(attachment)} type="button">
+                      Retry upload
+                    </button>
+                  ) : null}
+                  {onRemove ? (
+                    <button onClick={() => onRemove(attachment.id)} type="button">
+                      Remove attachment
+                    </button>
+                  ) : null}
+                </div>
               </>
             )
           })()}
