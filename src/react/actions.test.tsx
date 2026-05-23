@@ -1,5 +1,8 @@
-import { describe, expect, expectTypeOf, it } from "vitest"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 import type { UiArtifactPart, UiMessage } from "../model/types"
+import { createChatRuntime } from "../runtime/create-chat-runtime"
 import {
   getArtifactViewPayload,
   getAvailableMessageActions,
@@ -9,6 +12,9 @@ import {
   type UiPartActionDescriptor,
   type UiPartActionId,
 } from "./actions"
+import { ArtifactContainer } from "./artifact-container"
+import { ChatRoot } from "./chat-root"
+import { CurrentMessageProvider } from "./current-message"
 
 describe("actions", () => {
   it("exposes stable action id and descriptor types", () => {
@@ -178,6 +184,115 @@ describe("actions", () => {
       artifactKind: "diagram",
       viewId: "preview",
     })
+
+    expect(getArtifactViewPayload(part, "preview")).not.toBe(getArtifactViewPayload(part, "preview"))
+  })
+
+  it("emits open-artifact-view when the artifact surface switches views", async () => {
+    const user = userEvent.setup()
+    const onPartAction = vi.fn()
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const message: UiMessage = {
+      id: "message-1",
+      role: "assistant",
+      state: "complete",
+      feedback: "none",
+      parts: [],
+    }
+    const part: UiArtifactPart = {
+      id: "part-1",
+      kind: "artifact",
+      artifact: {
+        id: "artifact-1",
+        kind: "diagram",
+        defaultViewId: "preview",
+        views: [
+          {
+            id: "preview",
+            label: "Preview",
+            kind: "preview",
+            value: "diagram",
+          },
+          {
+            id: "source",
+            label: "Source",
+            kind: "source",
+            value: "raw diagram",
+          },
+        ],
+      },
+    }
+
+    render(
+      <ChatRoot onPartAction={onPartAction} runtime={runtime}>
+        <CurrentMessageProvider message={message}>
+          <ArtifactContainer part={part} />
+        </CurrentMessageProvider>
+      </ChatRoot>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Source" }))
+
+    expect(screen.getByRole("button", { name: "Source" })).toHaveAttribute("aria-pressed", "true")
+    expect(onPartAction).toHaveBeenCalledWith({
+      action: "open-artifact-view",
+      messageId: "message-1",
+      partId: "part-1",
+      partKind: "artifact",
+      artifactId: "artifact-1",
+      artifactKind: "diagram",
+      viewId: "source",
+    })
+    expect(onPartAction).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not emit open-artifact-view when the artifact surface re-clicks the active view", async () => {
+    const user = userEvent.setup()
+    const onPartAction = vi.fn()
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const message: UiMessage = {
+      id: "message-1",
+      role: "assistant",
+      state: "complete",
+      feedback: "none",
+      parts: [],
+    }
+    const part: UiArtifactPart = {
+      id: "part-1",
+      kind: "artifact",
+      artifact: {
+        id: "artifact-1",
+        kind: "diagram",
+        defaultViewId: "preview",
+        views: [
+          {
+            id: "preview",
+            label: "Preview",
+            kind: "preview",
+            value: "diagram",
+          },
+          {
+            id: "source",
+            label: "Source",
+            kind: "source",
+            value: "raw diagram",
+          },
+        ],
+      },
+    }
+
+    render(
+      <ChatRoot onPartAction={onPartAction} runtime={runtime}>
+        <CurrentMessageProvider message={message}>
+          <ArtifactContainer part={part} />
+        </CurrentMessageProvider>
+      </ChatRoot>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Preview" }))
+
+    expect(screen.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "true")
+    expect(onPartAction).not.toHaveBeenCalled()
   })
 
   it("returns fresh arrays and descriptors from helper APIs", () => {

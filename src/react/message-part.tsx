@@ -7,6 +7,7 @@ import { useCurrentMessage } from "./current-message"
 import { ImagePart } from "./image-part"
 import { PartActions } from "./part-actions"
 import { ReasoningBlock } from "./reasoning-block"
+import { useChatActionHandlers } from "./chat-root"
 import { useRenderers } from "./renderers"
 import { ToolCallBlock } from "./tool-call-block"
 
@@ -16,6 +17,7 @@ export type MessagePartProps = {
 
 export function MessagePart({ part }: MessagePartProps) {
   const message = useCurrentMessage()
+  const { onPartAction } = useChatActionHandlers()
   const renderers = useRenderers()
 
   function renderActions() {
@@ -45,7 +47,23 @@ export function MessagePart({ part }: MessagePartProps) {
       return (
         <div data-slot="message-part" data-state={part.state} data-type="reasoning">
           <div data-slot="reasoning" data-state={part.state}>
-            {renderers.renderReasoning ? <>{renderers.renderReasoning({ part })}</> : <ReasoningBlock part={part} />}
+            {renderers.renderReasoning ? (
+              <>{renderers.renderReasoning({ part })}</>
+            ) : (
+              <ReasoningBlock
+                onToggle={() => {
+                  if (message) {
+                    onPartAction?.({
+                      action: "toggle-reasoning",
+                      messageId: message.id,
+                      partId: part.id,
+                      partKind: part.kind,
+                    })
+                  }
+                }}
+                part={part}
+              />
+            )}
           </div>
           {renderActions()}
         </div>
@@ -54,7 +72,23 @@ export function MessagePart({ part }: MessagePartProps) {
       return (
         <div data-slot="message-part" data-state={part.status} data-type="tool-call">
           <div data-slot="toolcall" data-state={part.status}>
-            {renderers.renderToolCall ? <>{renderers.renderToolCall({ part })}</> : <ToolCallBlock part={part} />}
+            {renderers.renderToolCall ? (
+              <>{renderers.renderToolCall({ part })}</>
+            ) : (
+              <ToolCallBlock
+                onToggleDetails={() => {
+                  if (message) {
+                    onPartAction?.({
+                      action: "toggle-tool-details",
+                      messageId: message.id,
+                      partId: part.id,
+                      partKind: part.kind,
+                    })
+                  }
+                }}
+                part={part}
+              />
+            )}
           </div>
           {renderActions()}
         </div>

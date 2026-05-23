@@ -1,6 +1,9 @@
 import { useState } from "react"
 import type { UiArtifactMetadataValue, UiArtifactPart } from "../model/types"
+import { getArtifactViewPayload } from "./actions"
 import { ArtifactBody, getDefaultArtifactView } from "./artifact-body"
+import { useCurrentMessage } from "./current-message"
+import { useChatActionHandlers } from "./chat-root"
 import { useRenderers } from "./renderers"
 
 export type ArtifactContainerProps = {
@@ -20,6 +23,8 @@ function getInitialSelection(part: UiArtifactPart) {
 
 export function ArtifactContainer({ part }: ArtifactContainerProps) {
   const { artifact } = part
+  const message = useCurrentMessage()
+  const { onPartAction } = useChatActionHandlers()
   const renderers = useRenderers()
   const defaultView = getDefaultArtifactView(artifact)
   const [selection, setSelection] = useState(() => getInitialSelection(part))
@@ -42,7 +47,20 @@ export function ArtifactContainer({ part }: ArtifactContainerProps) {
               <button
                 aria-pressed={view.id === activeView?.id}
                 key={view.id}
-                onClick={() => setSelection({ artifact, viewId: view.id })}
+                onClick={() => {
+                  if (view.id === activeView?.id) {
+                    return
+                  }
+
+                  setSelection({ artifact, viewId: view.id })
+                  if (message) {
+                    onPartAction?.({
+                      ...getArtifactViewPayload(part, view.id),
+                      messageId: message.id,
+                      partKind: "artifact",
+                    })
+                  }
+                }}
                 type="button"
               >
                 {view.label}

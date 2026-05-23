@@ -3,16 +3,21 @@ import type { UiReasoningPart } from "../model/types"
 
 export type ReasoningBlockProps = {
   part: UiReasoningPart
+  onToggle?: (open: boolean) => void
 }
 
-export function ReasoningBlock({ part }: ReasoningBlockProps) {
+export function ReasoningBlock({ part, onToggle }: ReasoningBlockProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <section>
       <button
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          const nextOpen = !open
+          setOpen(nextOpen)
+          onToggle?.(nextOpen)
+        }}
         type="button"
       >
         {open ? "Hide reasoning" : "Show reasoning"}

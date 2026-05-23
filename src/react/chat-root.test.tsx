@@ -265,6 +265,128 @@ describe("ChatRoot", () => {
     })
   })
 
+  it("reports reasoning surface toggles through onPartAction", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const onPartAction = vi.fn()
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.reasoning.delta", messageId: "m1", partId: "p1", delta: "Think" })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Show reasoning" }))
+    fireEvent.click(screen.getByRole("button", { name: "Hide reasoning" }))
+
+    expect(onPartAction).toHaveBeenNthCalledWith(1, {
+      action: "toggle-reasoning",
+      messageId: "m1",
+      partId: "p1",
+      partKind: "reasoning",
+    })
+    expect(onPartAction).toHaveBeenNthCalledWith(2, {
+      action: "toggle-reasoning",
+      messageId: "m1",
+      partId: "p1",
+      partKind: "reasoning",
+    })
+  })
+
+  it("reports tool detail surface toggles through onPartAction", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const onPartAction = vi.fn()
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({
+      type: "part.tool.updated",
+      messageId: "m1",
+      partId: "p1",
+      toolName: "searchDocs",
+      status: "complete",
+      inputSummary: "query",
+      outputSummary: "result",
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Show tool details" }))
+    fireEvent.click(screen.getByRole("button", { name: "Hide tool details" }))
+
+    expect(onPartAction).toHaveBeenNthCalledWith(1, {
+      action: "toggle-tool-details",
+      messageId: "m1",
+      partId: "p1",
+      partKind: "tool-call",
+    })
+    expect(onPartAction).toHaveBeenNthCalledWith(2, {
+      action: "toggle-tool-details",
+      messageId: "m1",
+      partId: "p1",
+      partKind: "tool-call",
+    })
+  })
+
+  it("reports artifact view changes from the artifact surface through onPartAction", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const onPartAction = vi.fn()
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "p1",
+      artifact: {
+        id: "artifact-1",
+        kind: "diagram",
+        defaultViewId: "preview",
+        views: [
+          {
+            id: "preview",
+            label: "Preview",
+            kind: "preview",
+            value: "rendered",
+          },
+          {
+            id: "source",
+            label: "Source",
+            kind: "source",
+            value: "raw",
+          },
+        ],
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Source" }))
+
+    expect(screen.getByRole("button", { name: "Source" })).toHaveAttribute("aria-pressed", "true")
+    expect(onPartAction).toHaveBeenCalledWith({
+      action: "open-artifact-view",
+      messageId: "m1",
+      partId: "p1",
+      partKind: "artifact",
+      artifactId: "artifact-1",
+      artifactKind: "diagram",
+      viewId: "source",
+    })
+    expect(onPartAction).toHaveBeenCalledTimes(1)
+  })
+
   it("throws when useChatRuntime is used outside ChatRoot", () => {
     function Consumer() {
       useChatRuntime()

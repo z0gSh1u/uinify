@@ -1,10 +1,22 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { StrictMode } from "react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { UiArtifactPart, UiMessagePart } from "../model/types"
+import { createChatRuntime } from "../runtime/create-chat-runtime"
 import { AttachmentPart } from "./attachment-part"
+import { ChatRoot } from "./chat-root"
+import * as chatRootModule from "./chat-root"
+import { CurrentMessageProvider } from "./current-message"
+import * as currentMessageModule from "./current-message"
 import { MessagePart } from "./message-part"
+import { ReasoningBlock } from "./reasoning-block"
 import { RenderersProvider } from "./renderers"
+import { ToolCallBlock } from "./tool-call-block"
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe("AttachmentPart", () => {
   it("renders uploaded attachments as links when remoteUrl exists", () => {
@@ -155,16 +167,22 @@ describe("MessagePart", () => {
 
   it("toggles reasoning details", async () => {
     const user = userEvent.setup()
+    const onToggle = vi.fn()
+    const useCurrentMessageSpy = vi.spyOn(currentMessageModule, "useCurrentMessage")
+    const useChatActionHandlersSpy = vi.spyOn(chatRootModule, "useChatActionHandlers")
 
     render(
-      <MessagePart
-        part={{
-          id: "reasoning-1",
-          kind: "reasoning",
-          text: "Draft answer plan",
-          state: "complete",
-        }}
-      />,
+      <StrictMode>
+        <ReasoningBlock
+          onToggle={onToggle}
+          part={{
+            id: "reasoning-1",
+            kind: "reasoning",
+            text: "Draft answer plan",
+            state: "complete",
+          }}
+        />
+      </StrictMode>,
     )
 
     const toggle = screen.getByRole("button", { name: /show reasoning/i })
@@ -172,9 +190,16 @@ describe("MessagePart", () => {
 
     await user.click(toggle)
     expect(screen.getByText("Draft answer plan")).toBeInTheDocument()
+    expect(onToggle).toHaveBeenNthCalledWith(1, true)
+    expect(onToggle).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole("button", { name: /hide reasoning/i }))
     expect(screen.queryByText("Draft answer plan")).not.toBeInTheDocument()
+    expect(onToggle).toHaveBeenNthCalledWith(2, false)
+    expect(onToggle).toHaveBeenCalledTimes(2)
+
+    expect(useCurrentMessageSpy).not.toHaveBeenCalled()
+    expect(useChatActionHandlersSpy).not.toHaveBeenCalled()
   })
 
   it("shows tool call name and summaries", () => {
@@ -192,8 +217,142 @@ describe("MessagePart", () => {
     )
 
     expect(screen.getByText("searchCode")).toBeInTheDocument()
+    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
+    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
+  })
+
+  it("toggles tool details without consulting chat action hooks", async () => {
+    const user = userEvent.setup()
+    const onToggleDetails = vi.fn()
+    const useCurrentMessageSpy = vi.spyOn(currentMessageModule, "useCurrentMessage")
+    const useChatActionHandlersSpy = vi.spyOn(chatRootModule, "useChatActionHandlers")
+
+    render(
+      <StrictMode>
+        <ToolCallBlock
+          onToggleDetails={onToggleDetails}
+          part={{
+            id: "tool-1",
+            kind: "tool-call",
+            toolName: "searchCode",
+            status: "complete",
+            inputSummary: "Search src/react",
+            outputSummary: "Found 4 matches",
+          }}
+        />
+      </StrictMode>,
+    )
+
+    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
+    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Show tool details" }))
+
     expect(screen.getByText("Search src/react")).toBeInTheDocument()
     expect(screen.getByText("Found 4 matches")).toBeInTheDocument()
+    expect(onToggleDetails).toHaveBeenNthCalledWith(1, true)
+    expect(onToggleDetails).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole("button", { name: "Hide tool details" }))
+    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
+    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
+    expect(onToggleDetails).toHaveBeenNthCalledWith(2, false)
+    expect(onToggleDetails).toHaveBeenCalledTimes(2)
+
+    expect(useCurrentMessageSpy).not.toHaveBeenCalled()
+    expect(useChatActionHandlersSpy).not.toHaveBeenCalled()
+  })
+
+  it("reports reasoning surface toggles through the surrounding action layer", async () => {
+    const user = userEvent.setup()
+    const onPartAction = vi.fn()
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const message = {
+      id: "m1",
+      role: "assistant" as const,
+      state: "complete" as const,
+      feedback: "none" as const,
+      parts: [],
+    }
+
+    render(
+      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
+        <CurrentMessageProvider message={message}>
+          <MessagePart
+            part={{
+              id: "reasoning-1",
+              kind: "reasoning",
+              text: "Draft answer plan",
+              state: "complete",
+            }}
+          />
+        </CurrentMessageProvider>
+      </ChatRoot>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Show reasoning" }))
+    await user.click(screen.getByRole("button", { name: "Hide reasoning" }))
+
+    expect(onPartAction).toHaveBeenNthCalledWith(1, {
+      action: "toggle-reasoning",
+      messageId: "m1",
+      partId: "reasoning-1",
+      partKind: "reasoning",
+    })
+    expect(onPartAction).toHaveBeenNthCalledWith(2, {
+      action: "toggle-reasoning",
+      messageId: "m1",
+      partId: "reasoning-1",
+      partKind: "reasoning",
+    })
+    expect(onPartAction).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports tool detail surface toggles through the surrounding action layer", async () => {
+    const user = userEvent.setup()
+    const onPartAction = vi.fn()
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const message = {
+      id: "m1",
+      role: "assistant" as const,
+      state: "complete" as const,
+      feedback: "none" as const,
+      parts: [],
+    }
+
+    render(
+      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
+        <CurrentMessageProvider message={message}>
+          <MessagePart
+            part={{
+              id: "tool-1",
+              kind: "tool-call",
+              toolName: "searchCode",
+              status: "complete",
+              inputSummary: "Search src/react",
+              outputSummary: "Found 4 matches",
+            }}
+          />
+        </CurrentMessageProvider>
+      </ChatRoot>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Show tool details" }))
+    await user.click(screen.getByRole("button", { name: "Hide tool details" }))
+
+    expect(onPartAction).toHaveBeenNthCalledWith(1, {
+      action: "toggle-tool-details",
+      messageId: "m1",
+      partId: "tool-1",
+      partKind: "tool-call",
+    })
+    expect(onPartAction).toHaveBeenNthCalledWith(2, {
+      action: "toggle-tool-details",
+      messageId: "m1",
+      partId: "tool-1",
+      partKind: "tool-call",
+    })
+    expect(onPartAction).toHaveBeenCalledTimes(2)
   })
 
   it("routes artifact parts through the shared artifact container", async () => {
