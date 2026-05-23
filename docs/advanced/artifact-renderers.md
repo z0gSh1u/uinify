@@ -2,6 +2,8 @@
 
 Artifacts are message parts with a typed container shape and one or more renderable `views`. The current model is `UiArtifactPart`, which wraps a `UiArtifact` with:
 
+See the matching example template in `examples/templates/artifact-template.tsx`.
+
 - `kind`: host-defined artifact category such as `code`, `image`, or another domain-specific key.
 - `title` and `metadata`: optional display metadata.
 - `defaultViewId`: optional preferred initial view.

@@ -1,6 +1,5 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { exampleFixtures } from "./fixtures"
 import { ExamplePlayground } from "./playground/App"
 
 vi.mock("react-virtuoso", () => ({
@@ -20,32 +19,51 @@ vi.mock("react-virtuoso", () => ({
 }))
 
 describe("ExamplePlayground", () => {
-  it("renders grouped v0.2 example sections with scenarios under the intended headings", () => {
+  it("renders template-driven sections under the intended audience headings", () => {
     render(<ExamplePlayground />)
 
     const gettingStarted = screen.getByRole("heading", { name: "Getting started" }).closest("section")
     const integration = screen.getByRole("heading", { name: "Integration" }).closest("section")
     const advanced = screen.getByRole("heading", { name: "Advanced" }).closest("section")
 
-    expect(gettingStarted).toContainElement(screen.getByRole("heading", { name: "Starter chat flow" }))
-    expect(integration).toContainElement(screen.getByRole("heading", { name: "Integration mapper flow" }))
-    expect(advanced).toContainElement(screen.getByRole("heading", { name: "Upload lifecycle flow" }))
-    expect(advanced).toContainElement(screen.getByRole("heading", { name: "Artifact registry customization" }))
+    expect(gettingStarted).toBeTruthy()
+    expect(integration).toBeTruthy()
+    expect(advanced).toBeTruthy()
+
+    expect(within(gettingStarted as HTMLElement).getByRole("heading", { level: 2, name: "Minimal app template" })).toBeTruthy()
+    expect(within(integration as HTMLElement).getByRole("heading", { level: 2, name: "Adapter integration template" })).toBeTruthy()
+    expect(within(integration as HTMLElement).getByRole("heading", { level: 2, name: "Upload orchestration template" })).toBeTruthy()
+    expect(within(advanced as HTMLElement).getByRole("heading", { level: 2, name: "Artifact customization template" })).toBeTruthy()
   })
 
-  it("shows the custom scenario through the artifact registry override path", () => {
+  it("surfaces docs-aligned template metadata in the playground", () => {
     render(<ExamplePlayground />)
 
-    expect(screen.getByText(/Artifact registry override \(json\):/i)).toBeInTheDocument()
-    expect(screen.queryByText(/Custom tool:/i)).not.toBeInTheDocument()
-  })
-
-  it("shows the custom scenario safely rendering structured artifact values", () => {
-    render(<ExamplePlayground />)
-
-    expect(screen.getByRole("button", { name: "JSON" }).closest('[data-slot="artifact-container"]')?.querySelector("pre")?.textContent).toBe(
-      '{\n  "adapter": "host-event",\n  "dispatched": true\n}',
+    expect(screen.getByRole("link", { name: "Minimal app template" })).toHaveAttribute(
+      "href",
+      "docs/getting-started.md",
     )
-    expect(screen.queryByText("[structured artifact view unavailable]")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Adapter integration template" })).toHaveAttribute(
+      "href",
+      "docs/integration/stream-mapping.md",
+    )
+    expect(screen.getByRole("link", { name: "Upload orchestration template" })).toHaveAttribute(
+      "href",
+      "docs/integration/upload-lifecycle.md",
+    )
+    expect(screen.getByRole("link", { name: "Artifact customization template" })).toHaveAttribute(
+      "href",
+      "docs/advanced/artifact-renderers.md",
+    )
+  })
+
+  it("renders the template-specific example content instead of the old fixture scenarios", () => {
+    render(<ExamplePlayground />)
+
+    expect(screen.getAllByText(/Smallest copyable runtime plus transcript wiring/i)).toHaveLength(2)
+    expect(screen.getByText(/No adapter diagnostics for this transcript\./i)).toBeInTheDocument()
+    expect(screen.getByText("release-notes.pdf")).toBeInTheDocument()
+    expect(screen.getByText("const customized = true")).toBeInTheDocument()
+    expect(screen.queryByText("Starter chat flow")).not.toBeInTheDocument()
   })
 })

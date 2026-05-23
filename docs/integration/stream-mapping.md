@@ -2,6 +2,8 @@
 
 Map your host or backend protocol into `UiStreamEvent` before it reaches the runtime. This keeps `uinify` focused on chat state and rendering instead of vendor-specific transport details.
 
+See the matching example template in `examples/templates/adapter-template.tsx`.
+
 For first-time adoption, the recommended default setup is to import `uinify/styles.css` once near your app entrypoint.
 
 ## Pattern

@@ -2,6 +2,8 @@
 
 Start with the smallest possible setup: create a runtime, dispatch canonical stream events into it, and render messages with `ChatRoot` plus `MessageList`.
 
+See the matching example template in `examples/templates/minimal-app.tsx`.
+
 For first-time adoption, the recommended default setup is to import `uinify/styles.css` once near your app entrypoint.
 
 ## Minimal Setup

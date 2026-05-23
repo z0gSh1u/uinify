@@ -26,6 +26,8 @@ For first-time adoption, the recommended default setup is to import `uinify/styl
 
 Stable styling hooks are available through documented `data-slot` regions, `slotClassNames`, and the `--uinify-*` tokens in `uinify/styles.css`.
 
+See the matching example templates in `examples/templates/minimal-app.tsx`, `examples/templates/adapter-template.tsx`, `examples/templates/upload-template.tsx`, and `examples/templates/artifact-template.tsx`.
+
 ## Reference-only Surface
 
 The package currently exports more types and React primitives than the initial adoption docs cover. Treat those lower-level renderers, artifact helpers, composer exports, and example adapters as reference material until you have a concrete reason to build past the core runtime plus list flow.
