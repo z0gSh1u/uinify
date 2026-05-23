@@ -10,6 +10,14 @@ export type ExampleFixture = {
   events: UiStreamEvent[]
 }
 
+export type ExampleTemplate = {
+  id: "minimal" | "adapter" | "upload" | "artifact"
+  category: ExampleFixture["category"]
+  title: string
+  description: string
+  docsPath: string
+}
+
 const exampleCategoryTitles: Record<ExampleFixture["category"], string> = {
   "getting-started": "Getting started",
   integration: "Integration",
@@ -142,6 +150,45 @@ export const exampleFixtures: ExampleFixture[] = [
     ],
   },
 ]
+
+export const exampleTemplates: ExampleTemplate[] = [
+  {
+    id: "minimal",
+    category: "getting-started",
+    title: "Minimal app template",
+    description: "Smallest copyable runtime plus transcript wiring for a host app.",
+    docsPath: "docs/getting-started.md",
+  },
+  {
+    id: "adapter",
+    category: "integration",
+    title: "Adapter integration template",
+    description: "Adapter-mapped host events normalized into the shared runtime transcript.",
+    docsPath: "docs/integration/stream-mapping.md",
+  },
+  {
+    id: "upload",
+    category: "integration",
+    title: "Upload orchestration template",
+    description: "Controlled attachments keep upload progression in host-owned state.",
+    docsPath: "docs/integration/upload-lifecycle.md",
+  },
+  {
+    id: "artifact",
+    category: "advanced",
+    title: "Artifact customization template",
+    description: "Artifact registry overrides customize rendering without replacing the container shell.",
+    docsPath: "docs/advanced/artifact-renderers.md",
+  },
+]
+
+export const exampleTemplateSections = (Object.keys(exampleCategoryTitles) as ExampleTemplate["category"][])
+  .map((category) => ({
+    id: category,
+    title: exampleCategoryTitles[category],
+    templates: exampleTemplates.filter((template) => template.category === category),
+  }))
+  .filter((section) => section.templates.length > 0)
 
 export const exampleFixtureSections = (Object.keys(exampleCategoryTitles) as ExampleFixture["category"][])
   .map((category) => ({

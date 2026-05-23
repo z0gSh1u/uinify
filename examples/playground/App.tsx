@@ -1,52 +1,37 @@
-import { useState } from "react"
-import type { MessageRendererOverrides } from "../../src/react"
-import { ChatRoot, MessageList, renderDefaultArtifactBody } from "../../src/react"
-import { createExampleRuntime, exampleFixtureSections, type ExampleFixture } from "../fixtures"
+import { exampleTemplateSections, type ExampleTemplate } from "../fixtures"
+import { AdapterTemplate } from "../templates/adapter-template"
+import { ArtifactTemplate } from "../templates/artifact-template"
+import { MinimalAppTemplate } from "../templates/minimal-app"
+import { UploadTemplate } from "../templates/upload-template"
 
-const customRenderers: MessageRendererOverrides = {
-  artifactRegistry: {
-    code: ({ artifact, view }) => {
-      const language = view.language ?? artifact.metadata?.language ?? "code"
-      const value = renderDefaultArtifactBody({ artifact, part: { id: "example-artifact", kind: "artifact", artifact }, view })
-
-      return (
-        <div>
-          <div>Artifact registry override ({language}):</div>
-          {value}
-        </div>
-      )
-    },
-  },
-}
-
-function ExampleScenario({ fixture }: { fixture: ExampleFixture }) {
-  const [runtime] = useState(() => createExampleRuntime(fixture))
-
-  return (
-    <section>
-      <h2>{fixture.title}</h2>
-      <p>{fixture.description}</p>
-      <ChatRoot
-        renderers={fixture.id === "custom" ? customRenderers : undefined}
-        runtime={runtime}
-      >
-        <MessageList />
-      </ChatRoot>
-    </section>
-  )
-}
+const templateRegistry = {
+  minimal: MinimalAppTemplate,
+  adapter: AdapterTemplate,
+  upload: UploadTemplate,
+  artifact: ArtifactTemplate,
+} satisfies Record<ExampleTemplate["id"], () => React.JSX.Element>
 
 export function ExamplePlayground() {
   return (
     <main>
       <h1>uinify examples</h1>
-      {exampleFixtureSections.map((group) => {
+      {exampleTemplateSections.map((group) => {
         return (
           <section key={group.id}>
             <h2>{group.title}</h2>
-            {group.fixtures.map((fixture) => (
-              <ExampleScenario key={fixture.id} fixture={fixture} />
-            ))}
+            <ul>
+              {group.templates.map((template) => (
+                <li key={`${template.id}-docs`}>
+                  <a href={template.docsPath}>{template.title}</a>
+                  <p>{template.description}</p>
+                </li>
+              ))}
+            </ul>
+            {group.templates.map((template) => {
+              const Template = templateRegistry[template.id]
+
+              return <Template key={template.id} />
+            })}
           </section>
         )
       })}
