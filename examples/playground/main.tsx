@@ -1,6 +1,7 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
 import "../../src/styles.css"
+import "./playground.css"
 import { ExamplePlayground } from "./App"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

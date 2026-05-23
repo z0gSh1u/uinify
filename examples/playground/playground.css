@@ -1,0 +1,126 @@
+:root {
+  color: #e5e7eb;
+  background: #0f172a;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #020617 0%, #111827 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.playground-shell {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.playground-header {
+  margin: 0 auto 24px;
+  max-width: 1280px;
+}
+
+.playground-header h1,
+.playground-header p,
+.playground-section h2,
+.playground-preview-header h2,
+.playground-preview-header p {
+  margin-top: 0;
+}
+
+.playground-kicker {
+  margin: 0 0 8px;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.playground-layout {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.playground-sidebar,
+.playground-preview {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(14px);
+}
+
+.playground-sidebar {
+  padding: 20px;
+}
+
+.playground-section + .playground-section {
+  margin-top: 20px;
+}
+
+.playground-template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.playground-template-button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  color: inherit;
+  background: rgba(30, 41, 59, 0.7);
+  text-align: left;
+  cursor: pointer;
+}
+
+.playground-template-button[aria-pressed="true"] {
+  border-color: rgba(96, 165, 250, 0.7);
+  background: rgba(30, 64, 175, 0.35);
+}
+
+.playground-template-button small {
+  color: #cbd5e1;
+}
+
+.playground-preview {
+  padding: 20px;
+}
+
+.playground-preview-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.playground-preview-header a {
+  color: #bfdbfe;
+  white-space: nowrap;
+}
+
+.playground-preview-body {
+  overflow: auto;
+}
+
+@media (max-width: 960px) {
+  .playground-shell {
+    padding: 20px;
+  }
+
+  .playground-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-preview-header {
+    flex-direction: column;
+  }
+}
