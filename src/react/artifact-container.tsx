@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type { UiArtifactMetadataValue, UiArtifactPart } from "../model/types"
 import { ArtifactBody, getDefaultArtifactView } from "./artifact-body"
+import { useRenderers } from "./renderers"
 
 export type ArtifactContainerProps = {
   part: UiArtifactPart
@@ -19,12 +20,17 @@ function getInitialSelection(part: UiArtifactPart) {
 
 export function ArtifactContainer({ part }: ArtifactContainerProps) {
   const { artifact } = part
+  const renderers = useRenderers()
   const defaultView = getDefaultArtifactView(artifact)
   const [selection, setSelection] = useState(() => getInitialSelection(part))
   const activeViewId = selection.artifact === artifact ? selection.viewId : defaultView?.id
   const activeView = artifact.views.find((view) => view.id === activeViewId) ?? defaultView
-  const heading = artifact.title ?? artifact.kind
+  const heading = artifact.title ?? `${artifact.kind} artifact`
   const metadataEntries = Object.entries(artifact.metadata ?? {})
+  const isEmptyView = activeView !== undefined && typeof activeView.value === "string" && activeView.value.length === 0
+  const hasCustomRenderer =
+    renderers.artifactRegistry?.[artifact.kind] !== undefined || renderers.renderArtifactFallback !== undefined
+  const showEmptyViewMessage = isEmptyView && !hasCustomRenderer
 
   return (
     <section data-slot="artifact-container">
@@ -54,8 +60,15 @@ export function ArtifactContainer({ part }: ArtifactContainerProps) {
             </div>
           ))}
         </dl>
+      ) : (
+        <div data-slot="artifact-empty">No artifact metadata.</div>
+      )}
+      {!activeView ? (
+        <div data-slot="artifact-empty">No artifact views are available.</div>
+      ) : showEmptyViewMessage ? (
+        <div data-slot="artifact-empty">This artifact view is empty.</div>
       ) : null}
-      {activeView ? (
+      {activeView && !showEmptyViewMessage ? (
         <div data-slot="artifact-body">
           <ArtifactBody artifact={artifact} part={part} view={activeView} />
         </div>

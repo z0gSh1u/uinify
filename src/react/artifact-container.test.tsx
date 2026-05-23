@@ -142,6 +142,7 @@ describe("ArtifactContainer", () => {
       render(
         <ArtifactContainer
           part={createPart({
+            metadata: undefined,
             views: [],
           })}
         />,
@@ -149,8 +150,108 @@ describe("ArtifactContainer", () => {
     ).not.toThrow()
 
     expect(screen.getByText("Build output")).toBeInTheDocument()
+    expect(screen.getByText("No artifact metadata.")).toBeInTheDocument()
+    expect(screen.getByText("No artifact views are available.")).toBeInTheDocument()
     expect(screen.queryByRole("button")).not.toBeInTheDocument()
     expect(screen.queryByTestId("artifact-body")).not.toBeInTheDocument()
+  })
+
+  it("falls back to kind artifact heading and metadata empty copy", () => {
+    render(
+      <ArtifactContainer
+        part={createPart({
+          title: undefined,
+          metadata: {},
+        })}
+      />,
+    )
+
+    expect(screen.getByText("code artifact")).toBeInTheDocument()
+    expect(screen.getByText("No artifact metadata.")).toBeInTheDocument()
+    expect(screen.queryByText("path")).not.toBeInTheDocument()
+  })
+
+  it("renders empty view copy when selected view content is empty", () => {
+    render(
+      <ArtifactContainer
+        part={createPart({
+          defaultViewId: "preview",
+          views: [
+            {
+              id: "preview",
+              label: "Preview",
+              kind: "preview",
+              value: "",
+            },
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByText("This artifact view is empty.")).toBeInTheDocument()
+    expect(screen.queryByText("Rendered preview")).not.toBeInTheDocument()
+  })
+
+  it("keeps artifact registry renderers for empty string views", () => {
+    const part = createPart({
+      defaultViewId: "preview",
+      views: [
+        {
+          id: "preview",
+          label: "Preview",
+          kind: "preview",
+          value: "",
+        },
+      ],
+    })
+    const renderCodeArtifact = vi.fn(() => <div>Custom empty artifact</div>)
+
+    render(
+      <RenderersProvider value={{ artifactRegistry: { code: renderCodeArtifact } }}>
+        <ArtifactContainer part={part} />
+      </RenderersProvider>,
+    )
+
+    expect(screen.getByText("Custom empty artifact")).toBeInTheDocument()
+    expect(screen.queryByText("This artifact view is empty.")).not.toBeInTheDocument()
+    expect(renderCodeArtifact).toHaveBeenCalledTimes(1)
+    expect(renderCodeArtifact).toHaveBeenCalledWith({
+      artifact: part.artifact,
+      part,
+      view: part.artifact.views[0],
+    })
+  })
+
+  it("keeps renderArtifactFallback for empty string views", () => {
+    const part = createPart({
+      kind: "diagram",
+      defaultViewId: "preview",
+      views: [
+        {
+          id: "preview",
+          label: "Preview",
+          kind: "preview",
+          value: "",
+        },
+      ],
+    })
+    const renderArtifactFallback = vi.fn(() => <div>Fallback empty artifact</div>)
+
+    render(
+      <RenderersProvider value={{ renderArtifactFallback }}>
+        <ArtifactContainer part={part} />
+      </RenderersProvider>,
+    )
+
+    expect(screen.getByText("Fallback empty artifact")).toBeInTheDocument()
+    expect(screen.queryByText("This artifact view is empty.")).not.toBeInTheDocument()
+    expect(renderArtifactFallback).toHaveBeenCalledTimes(1)
+    expect(renderArtifactFallback).toHaveBeenCalledWith({
+      artifact: part.artifact,
+      part,
+      view: part.artifact.views[0],
+    })
   })
 
   it("renders code artifacts in a code block by default", () => {
