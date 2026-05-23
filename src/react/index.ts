@@ -27,16 +27,23 @@ export {
 export {
   ChatRoot,
   type ChatRootProps,
+  type ChatActionHandlers,
+  type MessageActionPayload,
+  type OpenArtifactViewActionPayload,
+  type PartActionPayload,
   type SlotClassNames,
+  useChatActionHandlers,
   useChatRuntime,
   useSlotClassNames,
 } from "./chat-root"
 export { ErrorBoundary } from "./error-boundary"
 export { FeedbackButtons, type FeedbackButtonsProps } from "./feedback-buttons"
 export { ImagePart, type ImagePartProps } from "./image-part"
+export { MessageActions, type MessageActionsProps } from "./message-actions"
 export { Message, type MessageProps } from "./message"
 export { MessageList, type MessageListProps } from "./message-list"
 export { MessagePart, type MessagePartProps } from "./message-part"
+export { PartActions, type PartActionsProps } from "./part-actions"
 export {
   ReasoningBlock,
   type ReasoningBlockProps,

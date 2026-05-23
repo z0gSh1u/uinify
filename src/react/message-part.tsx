@@ -3,7 +3,9 @@ import remarkGfm from "remark-gfm"
 import type { UiMessagePart } from "../model/types"
 import { AttachmentPart } from "./attachment-part"
 import { ArtifactContainer } from "./artifact-container"
+import { useCurrentMessage } from "./current-message"
 import { ImagePart } from "./image-part"
+import { PartActions } from "./part-actions"
 import { ReasoningBlock } from "./reasoning-block"
 import { useRenderers } from "./renderers"
 import { ToolCallBlock } from "./tool-call-block"
@@ -13,19 +15,30 @@ export type MessagePartProps = {
 }
 
 export function MessagePart({ part }: MessagePartProps) {
+  const message = useCurrentMessage()
   const renderers = useRenderers()
+
+  function renderActions() {
+    if (!message) {
+      return null
+    }
+
+    return <PartActions message={message} part={part} />
+  }
 
   switch (part.kind) {
     case "text":
       return (
         <div data-slot="message-part" data-state="complete" data-type="text">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+          {renderActions()}
         </div>
       )
     case "image":
       return (
         <div data-slot="message-part" data-state="complete" data-type="image">
           <ImagePart part={part} />
+          {renderActions()}
         </div>
       )
     case "reasoning":
@@ -34,6 +47,7 @@ export function MessagePart({ part }: MessagePartProps) {
           <div data-slot="reasoning" data-state={part.state}>
             {renderers.renderReasoning ? <>{renderers.renderReasoning({ part })}</> : <ReasoningBlock part={part} />}
           </div>
+          {renderActions()}
         </div>
       )
     case "tool-call":
@@ -42,6 +56,7 @@ export function MessagePart({ part }: MessagePartProps) {
           <div data-slot="toolcall" data-state={part.status}>
             {renderers.renderToolCall ? <>{renderers.renderToolCall({ part })}</> : <ToolCallBlock part={part} />}
           </div>
+          {renderActions()}
         </div>
       )
     case "artifact":
@@ -50,12 +65,14 @@ export function MessagePart({ part }: MessagePartProps) {
           <div data-kind={part.artifact.kind} data-slot={part.artifact.kind === "code" ? "artifact-code" : "artifact-text"}>
             <ArtifactContainer part={part} />
           </div>
+          {renderActions()}
         </div>
       )
     case "attachment":
       return (
         <div data-slot="message-part" data-state={part.attachment.status} data-type="attachment">
           <AttachmentPart part={part} />
+          {renderActions()}
         </div>
       )
     default: {

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createChatRuntime } from "../runtime/create-chat-runtime"
 import { ChatRoot, useChatRuntime } from "./chat-root"
@@ -136,6 +136,133 @@ describe("ChatRoot", () => {
       "https://example.com/report.pdf",
     )
     expect(screen.getByRole("link", { name: "report.pdf" }).closest('[data-slot="attachment-part"]')).toBeTruthy()
+  })
+
+  it("renders default message and part action rows and calls host callbacks", () => {
+    const runtime = createChatRuntime({ conversationId: "demo" })
+    const onMessageAction = vi.fn()
+    const onPartAction = vi.fn()
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
+    runtime.dispatch({ type: "part.reasoning.delta", messageId: "m1", partId: "p2", delta: "Think" })
+    runtime.dispatch({
+      type: "part.tool.updated",
+      messageId: "m1",
+      partId: "p4",
+      toolName: "searchDocs",
+      status: "complete",
+      inputSummary: "query",
+      outputSummary: "result",
+    })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "p3",
+      artifact: {
+        id: "artifact-1",
+        kind: "diagram",
+        views: [
+          {
+            id: "preview",
+            label: "Preview",
+            kind: "preview",
+            value: "rendered",
+          },
+          {
+            id: "source",
+            label: "Source",
+            kind: "source",
+            value: "raw",
+          },
+        ],
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime} onMessageAction={onMessageAction} onPartAction={onPartAction}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    const message = screen.getByText("Hello").closest('[data-slot="message"]')
+
+    expect(message).toBeTruthy()
+    expect(within(message as HTMLElement).getByRole("group", { name: "Message feedback" })).toBeTruthy()
+
+    const messageActions = within(message as HTMLElement).getByRole("group", {
+      name: "Message actions",
+    })
+    expect(messageActions).toHaveAttribute("data-slot", "message-actions")
+    expect(within(messageActions).getByRole("button", { name: "Copy message" })).toBeTruthy()
+    expect(within(messageActions).getByRole("button", { name: "Retry message" })).toBeTruthy()
+    expect(within(messageActions).getByRole("button", { name: "Regenerate message" })).toBeTruthy()
+
+    fireEvent.click(within(messageActions).getByRole("button", { name: "Retry message" }))
+
+    expect(onMessageAction).toHaveBeenCalledWith({
+      action: "retry",
+      messageId: "m1",
+      role: "assistant",
+    })
+
+    const reasoningActions = screen
+      .getByRole("button", { name: "Show reasoning" })
+      .closest('[data-slot="message-part"]')
+
+    expect(reasoningActions).toBeTruthy()
+
+    const reasoningActionRow = within(reasoningActions as HTMLElement).getByRole("group", {
+      name: "Reasoning part actions",
+    })
+    expect(reasoningActionRow).toHaveAttribute("data-slot", "part-actions")
+
+    fireEvent.click(within(reasoningActionRow).getByRole("button", { name: "Toggle reasoning" }))
+
+    expect(onPartAction).toHaveBeenCalledWith({
+      action: "toggle-reasoning",
+      messageId: "m1",
+      partId: "p2",
+      partKind: "reasoning",
+    })
+
+    const toolCallActions = screen.getByText("searchDocs").closest('[data-slot="message-part"]')
+
+    expect(toolCallActions).toBeTruthy()
+
+    const toolCallActionRow = within(toolCallActions as HTMLElement).getByRole("group", {
+      name: "Tool call part actions",
+    })
+
+    fireEvent.click(within(toolCallActionRow).getByRole("button", { name: "Tool details" }))
+
+    expect(onPartAction).toHaveBeenCalledWith({
+      action: "toggle-tool-details",
+      messageId: "m1",
+      partId: "p4",
+      partKind: "tool-call",
+    })
+
+    const artifactPart = screen.getByText("rendered").closest('[data-slot="message-part"]')
+
+    expect(artifactPart).toBeTruthy()
+
+    const artifactActionRow = within(artifactPart as HTMLElement).getByRole("group", {
+      name: "Artifact part actions",
+    })
+
+    fireEvent.click(within(artifactActionRow).getByRole("button", { name: "Open artifact view" }))
+
+    expect(onPartAction).toHaveBeenCalledWith({
+      action: "open-artifact-view",
+      messageId: "m1",
+      partId: "p3",
+      partKind: "artifact",
+      artifactId: "artifact-1",
+      artifactKind: "diagram",
+      viewId: "preview",
+    })
   })
 
   it("throws when useChatRuntime is used outside ChatRoot", () => {
