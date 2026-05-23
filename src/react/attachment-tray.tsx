@@ -7,6 +7,33 @@ export type AttachmentTrayProps = {
   onRetry?: (attachment: UiComposerAttachment) => void
 }
 
+function getStageLabel(attachment: UiComposerAttachment) {
+  if (attachment.rejection) {
+    return "Rejected"
+  }
+
+  switch (attachment.status) {
+    case "queued":
+      return "Queued"
+    case "uploading":
+      return "Uploading"
+    case "uploaded":
+      return "Uploaded"
+    case "error":
+      return "Upload failed"
+    default:
+      return null
+  }
+}
+
+function getBlockedReason(attachment: UiComposerAttachment) {
+  if (attachment.rejection?.message) {
+    return attachment.rejection.message
+  }
+
+  return attachment.error
+}
+
 export function AttachmentTray({ attachments, onRemove, onRetry }: AttachmentTrayProps) {
   const slotClassNames = useSlotClassNames()
   const visibleAttachments = attachments.filter((attachment) => attachment.status !== "removed")
@@ -20,19 +47,30 @@ export function AttachmentTray({ attachments, onRemove, onRetry }: AttachmentTra
           data-slot="attachment-item"
           data-state={attachment.status}
         >
+          {(() => {
+            const stageLabel = getStageLabel(attachment)
+            const blockedReason = getBlockedReason(attachment)
+
+            return (
+              <>
           <span>{attachment.name}</span>
-          {attachment.progress !== undefined ? <span>{String(attachment.progress)}</span> : null}
-          {attachment.error ? <span>{attachment.error}</span> : null}
+          {stageLabel ? <span>{stageLabel}</span> : null}
+          {attachment.progress !== undefined ? <span>{attachment.progress}% uploaded</span> : null}
+          {blockedReason && blockedReason !== stageLabel ? <span>{blockedReason}</span> : null}
+          {attachment.rejection ? <span>This file was rejected before upload.</span> : null}
           {attachment.status === "error" && onRetry ? (
             <button onClick={() => onRetry(attachment)} type="button">
-              Retry
+              Retry upload
             </button>
           ) : null}
           {onRemove ? (
             <button onClick={() => onRemove(attachment.id)} type="button">
-              Remove
+              Remove attachment
             </button>
           ) : null}
+              </>
+            )
+          })()}
         </div>
       ))}
     </div>

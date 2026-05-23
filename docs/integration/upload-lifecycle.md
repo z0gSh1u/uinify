@@ -12,6 +12,8 @@ Use `UiComposerAttachment[]` as the contract between your upload system and the 
 - Move attachments to `uploading` while your host uploader is in flight.
 - Mark attachments `uploaded` once the host has a stable remote result, typically with `remoteUrl`.
 - Mark attachments `error` when upload fails and surface an `error` message for retry UI.
+- Host validation may reject an attachment before upload starts. In that case, return or render an attachment with `status: "error"`, a `rejection` object, and a stable `sourceAttachmentId` that points back to the original local attachment.
+- If the user cancels an in-flight upload, treat that as host-owned intent. Composer integrations may expose that through separate host-controlled UI, but the tray itself only reflects remove semantics unless the callback contract explicitly distinguishes cancel.
 - Remove attachments from the send payload by marking them `removed` or filtering removed items out of a controlled list.
 
 The composer does not perform upload network work on its own. It reflects the current `attachments` array and emits attachment list changes through `onAttachmentsChange`.
@@ -89,7 +91,25 @@ Key props in this flow:
 - `attachments`: the host-controlled source of truth for the current attachment list.
 - `onAttachmentsChange`: called when the composer adds or removes attachments.
 - `onAttachmentRetry`: called when the user retries an attachment in `error`.
+- `onAttachmentCancel`: optional hook for uploading attachments in composer integrations that distinguish cancel intent from removal.
 - `sendPolicy`: set to `"uploaded-only"` to block submit until all non-removed attachments are `uploaded`, or leave the default `"allow-pending"` to submit while uploads are still pending.
+
+## Validation And Rejection Contract
+
+Host validation is authoritative. The composer can collect files and display what you provide, but your app decides whether a file is accepted.
+
+- Accepted files continue through `queued`, `uploading`, `uploaded`, and `error` based on host updates.
+- Rejected files should be represented with `status: "error"` plus `rejection.message` so the tray can show explicit validation feedback.
+- Use `sourceAttachmentId` on derived host records, especially rejected or later transcript attachments, to preserve continuity from the original local attachment entry.
+- Keep `sourceAttachmentId` stable across later lifecycle updates for the same underlying file so transcript rendering can communicate continuity clearly without exposing raw internal ids to end users.
+
+## Cancel Intent
+
+`uinify` does not abort your network client directly.
+
+- When `onAttachmentCancel` is provided, the composer forwards cancel intent for `uploading` attachments to the host.
+- When `onAttachmentCancel` is absent, removing an uploading attachment falls back to local removal behavior.
+- If your host turns a canceled upload into an `error` or `removed` entry, send that updated attachment state back through your controlled list.
 
 ## Required States
 

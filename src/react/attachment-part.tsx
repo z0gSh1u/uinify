@@ -5,13 +5,28 @@ export type AttachmentPartProps = {
 }
 
 export function AttachmentPart({ part }: AttachmentPartProps) {
-  const { error, name, progress, remoteUrl, status } = part.attachment
+  const { error, name, progress, rejection, remoteUrl, sourceAttachmentId, status } = part.attachment
+
+  const stageLabel = rejection
+    ? "Rejected"
+    : status === "queued"
+      ? "Queued"
+      : status === "uploading"
+        ? "Uploading"
+        : status === "uploaded"
+          ? "Uploaded"
+          : status === "error"
+            ? "Upload failed"
+            : null
+  const detail = rejection?.message ?? error
 
   return (
     <div data-slot="attachment-part" data-state={status}>
       {remoteUrl ? <a href={remoteUrl}>{name}</a> : <span>{name}</span>}
-      {progress !== undefined ? <div>{String(progress)}</div> : null}
-      {error ? <div>{error}</div> : null}
+      {stageLabel ? <div>{stageLabel}</div> : null}
+      {progress !== undefined ? <div>{progress}% uploaded</div> : null}
+      {detail && detail !== stageLabel ? <div>{detail}</div> : null}
+      {sourceAttachmentId ? <div>Linked to an earlier attachment</div> : null}
     </div>
   )
 }
