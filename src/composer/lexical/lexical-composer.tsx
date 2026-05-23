@@ -18,6 +18,7 @@ import {
 import type {
   UiComposerAttachment,
   UiComposerChoice,
+  UiComposerAttachmentValidationResult,
   UiComposerValue,
 } from "../contracts"
 import { AttachmentTray } from "../../react/attachment-tray"
@@ -41,6 +42,8 @@ export type LexicalComposerProps = {
   attachments?: UiComposerAttachment[]
   onAttachmentsChange?: (attachments: UiComposerAttachment[]) => void
   onAttachmentRetry?: (attachment: UiComposerAttachment) => void
+  onAttachmentValidation?: (attachments: UiComposerAttachment[]) => UiComposerAttachmentValidationResult[]
+  onAttachmentCancel?: (attachment: UiComposerAttachment) => void
   sendPolicy?: "allow-pending" | "uploaded-only"
   slashCommands?: UiComposerChoice[]
   mentions?: UiComposerChoice[]
@@ -52,6 +55,8 @@ export function LexicalComposer({
   attachments: controlledAttachments,
   onAttachmentsChange,
   onAttachmentRetry,
+  onAttachmentValidation,
+  onAttachmentCancel,
   sendPolicy = "allow-pending",
   slashCommands = [],
   mentions = [],
@@ -87,8 +92,12 @@ export function LexicalComposer({
     setComposerAttachments(updater)
   }
   const attachmentHandlers = useMemo(
-    () => createAttachmentHandlers((items) => updateAttachments((current) => [...current, ...items])),
-    [attachments, controlledAttachments, onAttachmentsChange],
+    () =>
+      createAttachmentHandlers(
+        (items) => updateAttachments((current) => [...current, ...items]),
+        onAttachmentValidation,
+      ),
+    [onAttachmentValidation, controlledAttachments, onAttachmentsChange],
   )
 
   const getActiveTokenState = (): ActiveTokenState => readActiveTokenState(editorRef.current)
@@ -216,11 +225,12 @@ export function LexicalComposer({
     editorRef.current?.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
-  const submittableAttachments = attachments.filter((attachment) => attachment.status !== "removed")
+  const submittableAttachments = attachments.filter(
+    (attachment) => attachment.status !== "removed" && !attachment.rejection,
+  )
+  const submitBlockedReason = readSubmitBlockedReason(submittableAttachments, sendPolicy)
 
-  const isSubmitBlocked =
-    sendPolicy === "uploaded-only" &&
-    submittableAttachments.some((attachment) => attachment.status !== "uploaded")
+  const isSubmitBlocked = submitBlockedReason !== null
 
   return (
     <div data-slot="composer">
@@ -278,11 +288,19 @@ export function LexicalComposer({
         attachments={attachments}
         onRetry={onAttachmentRetry}
         onRemove={(id) => {
+          const attachment = attachments.find((item) => item.id === id)
+
+          if (attachment?.status === "uploading" && onAttachmentCancel) {
+            onAttachmentCancel?.(attachment)
+            return
+          }
+
           updateAttachments((items) => items.filter((item) => item.id !== id))
         }}
       />
 
       <button
+        data-send-blocked-reason={submitBlockedReason ?? undefined}
         disabled={isSubmitBlocked}
         onClick={() => {
           if (isSubmitBlocked) {
@@ -463,6 +481,25 @@ function deriveChoiceIdsFromText(text: string, items: UiComposerChoice[]) {
   const matches = text.match(/(?:^|\s)([\/@]\S*)/g) ?? []
 
   return matches.flatMap((match) => choicesByToken.get(match.trim()) ?? [])
+}
+
+function readSubmitBlockedReason(
+  attachments: UiComposerAttachment[],
+  sendPolicy: "allow-pending" | "uploaded-only",
+) {
+  if (sendPolicy !== "uploaded-only") {
+    return null
+  }
+
+  if (attachments.some((attachment) => attachment.status === "uploading")) {
+    return "attachments-uploading"
+  }
+
+  if (attachments.some((attachment) => attachment.status !== "uploaded")) {
+    return "attachments-not-uploaded"
+  }
+
+  return null
 }
 
 function readChoiceToken(choice: UiComposerChoice) {

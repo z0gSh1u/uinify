@@ -8,6 +8,7 @@ import {
   type LexicalEditor,
 } from "lexical"
 import { describe, expect, it, vi } from "vitest"
+import type { UiComposerAttachment } from "../contracts"
 import { LexicalComposer } from "./lexical-composer"
 
 function setEditorText(element: HTMLElement, text: string) {
@@ -110,6 +111,11 @@ describe("LexicalComposer", () => {
     const textbox = screen.getByRole("textbox", { name: "Message" })
     setEditorText(textbox, "Hello world")
 
+    expect(screen.getByRole("button", { name: /send/i })).toHaveAttribute(
+      "data-send-blocked-reason",
+      "attachments-not-uploaded",
+    )
+
     await user.click(screen.getByRole("button", { name: /send/i }))
 
     expect(onSubmit).not.toHaveBeenCalled()
@@ -140,6 +146,11 @@ describe("LexicalComposer", () => {
 
     const textbox = screen.getByRole("textbox", { name: "Message" })
     setEditorText(textbox, "Hello world")
+
+    expect(screen.getByRole("button", { name: /send/i })).toHaveAttribute(
+      "data-send-blocked-reason",
+      "attachments-uploading",
+    )
 
     await user.click(screen.getByRole("button", { name: /send/i }))
 
@@ -175,6 +186,152 @@ describe("LexicalComposer", () => {
     await user.click(screen.getByRole("button", { name: /send/i }))
 
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it("surfaces rejected attachments from host validation", async () => {
+    const user = userEvent.setup()
+    const allowedFile = new File(["hello"], "hello.txt", { type: "text/plain" })
+    const rejectedFile = new File(["blocked"], "blocked.txt", { type: "text/plain" })
+
+    render(
+      <LexicalComposer
+        onAttachmentValidation={(attachments) =>
+          attachments.map((attachment) =>
+            attachment.name === "blocked.txt"
+              ? {
+                  ok: false,
+                  attachment: {
+                    id: `${attachment.id}-rejected`,
+                    name: attachment.name,
+                    mimeType: attachment.mimeType,
+                    size: attachment.size,
+                    sourceAttachmentId: attachment.id,
+                    status: "error",
+                    rejection: {
+                      code: "invalid-type",
+                      message: "Blocked by host",
+                    },
+                  },
+                }
+              : { ok: true, attachment },
+          )
+        }
+        onSubmit={() => undefined}
+      />,
+    )
+
+    firePasteWithFiles(screen.getByRole("textbox", { name: "Message" }), [allowedFile, rejectedFile])
+
+    expect(screen.getByText("hello.txt")).toBeInTheDocument()
+    expect(screen.getByText("blocked.txt")).toBeInTheDocument()
+    expect(screen.getByText("Blocked by host")).toBeInTheDocument()
+
+    await user.click(screen.getAllByRole("button", { name: /remove/i })[1]!)
+    expect(screen.queryByText("blocked.txt")).not.toBeInTheDocument()
+  })
+
+  it("excludes rejected attachments from the submit payload", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const allowedFile = new File(["hello"], "hello.txt", { type: "text/plain" })
+    const rejectedFile = new File(["blocked"], "blocked.txt", { type: "text/plain" })
+
+    render(
+      <LexicalComposer
+        onAttachmentValidation={(attachments) =>
+          attachments.map((attachment) =>
+            attachment.name === "blocked.txt"
+              ? {
+                  ok: false,
+                  attachment: {
+                    id: `${attachment.id}-rejected`,
+                    name: attachment.name,
+                    mimeType: attachment.mimeType,
+                    size: attachment.size,
+                    sourceAttachmentId: attachment.id,
+                    status: "error",
+                    rejection: {
+                      code: "invalid-type",
+                      message: "Blocked by host",
+                    },
+                  },
+                }
+              : { ok: true, attachment },
+          )
+        }
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    firePasteWithFiles(textbox, [allowedFile, rejectedFile])
+    setEditorText(textbox, "Hello world")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Hello world",
+      attachments: [expect.objectContaining({ name: "hello.txt", status: "queued" })],
+      commands: [],
+      mentions: [],
+    })
+  })
+
+  it("delegates cancel intent for uploading attachments", async () => {
+    const user = userEvent.setup()
+    const onAttachmentCancel = vi.fn()
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" })
+
+    render(
+      <LexicalComposer
+        attachments={[
+          {
+            file,
+            id: "a1",
+            mimeType: file.type,
+            name: "hello.txt",
+            progress: 50,
+            size: file.size,
+            status: "uploading",
+          },
+        ]}
+        onAttachmentCancel={onAttachmentCancel}
+        onSubmit={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /remove/i }))
+
+    expect(onAttachmentCancel).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "a1", status: "uploading" }),
+    )
+  })
+
+  it("removes uploading attachments locally when no cancel hook is provided", async () => {
+    const user = userEvent.setup()
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" })
+
+    render(
+      <LexicalComposer
+        initialAttachments={[
+          {
+            file,
+            id: "a1",
+            mimeType: file.type,
+            name: "hello.txt",
+            progress: 50,
+            size: file.size,
+            status: "uploading",
+          },
+        ]}
+        onSubmit={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /remove/i }))
+
+    expect(screen.queryByText("hello.txt")).not.toBeInTheDocument()
   })
 
   it("excludes removed attachments from the submit payload", async () => {
@@ -264,6 +421,34 @@ describe("LexicalComposer", () => {
     expect(onSubmit.mock.calls[0]?.[0].attachments[0]).toEqual(
       expect.objectContaining({ name: "second.txt" }),
     )
+  })
+
+  it("preserves successive updates after validation callback changes", () => {
+    const firstFile = new File(["first"], "first.txt", { type: "text/plain" })
+    const secondFile = new File(["second"], "second.txt", { type: "text/plain" })
+    const firstValidation = vi.fn((attachments: UiComposerAttachment[]) =>
+      attachments.map((attachment) => ({ ok: true as const, attachment })),
+    )
+    const secondValidation = vi.fn((attachments: UiComposerAttachment[]) =>
+      attachments.map((attachment) => ({ ok: true as const, attachment })),
+    )
+
+    const { rerender } = render(
+      <LexicalComposer onAttachmentValidation={firstValidation} onSubmit={() => undefined} />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    firePasteWithFiles(textbox, [firstFile])
+
+    rerender(<LexicalComposer onAttachmentValidation={secondValidation} onSubmit={() => undefined} />)
+
+    firePasteWithFiles(screen.getByRole("textbox", { name: "Message" }), [secondFile])
+
+    expect(firstValidation).toHaveBeenCalledTimes(1)
+    expect(secondValidation).toHaveBeenCalledTimes(1)
+    expect(screen.getByText("first.txt")).toBeInTheDocument()
+    expect(screen.getByText("second.txt")).toBeInTheDocument()
   })
 
   it("submits plain text and initial attachments through the real editor shell", async () => {

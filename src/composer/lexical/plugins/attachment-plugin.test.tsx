@@ -78,6 +78,48 @@ describe("attachment-plugin", () => {
     expect(preventDefault).not.toHaveBeenCalled()
   })
 
+  it("createAttachmentHandlers validates attachments before adding them", () => {
+    const onAdd = vi.fn()
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" })
+    const rejectedFile = new File(["nope"], "blocked.txt", { type: "text/plain" })
+    const handlers = createAttachmentHandlers(onAdd, (attachments) =>
+      attachments.map((attachment) =>
+        attachment.name === "blocked.txt"
+          ? {
+              ok: false as const,
+              attachment: {
+                id: `${attachment.id}-rejected`,
+                name: attachment.name,
+                mimeType: attachment.mimeType,
+                size: attachment.size,
+                sourceAttachmentId: attachment.id,
+                status: "error" as const,
+                rejection: {
+                  code: "invalid-type" as const,
+                  message: "Blocked by host",
+                },
+              },
+            }
+          : { ok: true as const, attachment },
+      ),
+    )
+
+    handlers.onPaste({
+      clipboardData: { files: [file, rejectedFile] },
+      preventDefault: vi.fn(),
+    } as never)
+
+    expect(onAdd).toHaveBeenCalledWith([
+      expect.objectContaining({ name: "hello.txt", status: "queued" }),
+      expect.objectContaining({
+        name: "blocked.txt",
+        status: "error",
+        rejection: expect.objectContaining({ message: "Blocked by host" }),
+        sourceAttachmentId: expect.any(String),
+      }),
+    ])
+  })
+
   it("adds pasted files to the attachment tray", () => {
     const file = new File(["hello"], "hello.txt", { type: "text/plain" })
 
