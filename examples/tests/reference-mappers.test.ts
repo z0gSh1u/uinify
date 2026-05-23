@@ -1,9 +1,9 @@
 import { createChatRuntime, type UiStreamEvent } from "../../src"
 import { describe, expect, it } from "vitest"
-import { adaptAgentLikeEvent, mapAgentLikeEvent, type AgentLikeEvent } from "./agent-like"
-import { adaptCustomMinimalEvent, mapCustomMinimalEvent } from "./custom-minimal"
-import { agentLikeFixture, customMinimalFixture, openAiLikeFixture } from "./protocol-fixtures"
-import { adaptOpenAiLikeChunk, mapOpenAiLikeChunk } from "./openai-like"
+import { adaptAgentLikeEvent, mapAgentLikeEvent, type AgentLikeEvent } from "../adapters/agent-like"
+import { adaptCustomMinimalEvent, mapCustomMinimalEvent } from "../adapters/custom-minimal"
+import { agentLikeFixture, customMinimalFixture, openAiLikeFixture } from "../adapters/protocol-fixtures"
+import { adaptOpenAiLikeChunk, mapOpenAiLikeChunk } from "../adapters/openai-like"
 
 describe("OpenAI-like reference mapper", () => {
   it("exposes a recipe helper that returns events and diagnostics", () => {

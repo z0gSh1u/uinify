@@ -29,8 +29,8 @@
   ],
   "scripts": {
     "build": "tsup --config tsup.config.ts && node scripts/copy-styles.mjs",
-    "build:example": "vite build --config vite.config.ts --outDir dist-example examples/playground",
-    "dev:example": "vite --config vite.config.ts examples/playground/index.html",
+    "build:example": "vite build --config vite.example.config.ts",
+    "dev:example": "vite --config vite.example.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -49,6 +49,7 @@
     "@testing-library/jest-dom": "^6.4.5",
     "@testing-library/react": "^15.0.7",
     "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.15.30",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "jsdom": "^24.1.0",

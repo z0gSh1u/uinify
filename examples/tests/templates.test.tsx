@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { AdapterTemplate } from "./adapter-template"
-import { ArtifactTemplate } from "./artifact-template"
-import { MinimalAppTemplate } from "./minimal-app"
-import { UploadTemplate } from "./upload-template"
+import { AdapterTemplate } from "../templates/adapter-template"
+import { ArtifactTemplate } from "../templates/artifact-template"
+import { MinimalAppTemplate } from "../templates/minimal-app"
+import { UploadTemplate } from "../templates/upload-template"
 
 vi.mock("react-virtuoso", () => ({
   Virtuoso: ({
