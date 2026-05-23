@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createChatRuntime } from "../runtime/create-chat-runtime"
 import { AttachmentTray } from "./attachment-tray"
@@ -64,6 +64,140 @@ describe("ChatRoot", () => {
     expect(screen.getByText("Hello").closest('[data-slot="message-parts"]')).toHaveClass(
       "custom-message-parts",
     )
+  })
+
+  it("applies slotClassNames to newly documented stable slots", () => {
+    const runtime = createChatRuntime({ conversationId: "slot-classes" })
+    const file = new File(["hello"], "draft.txt", { type: "text/plain" })
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
+    runtime.dispatch({
+      type: "part.artifact.emitted",
+      messageId: "m1",
+      partId: "artifact-1",
+      artifact: {
+        id: "artifact-1",
+        kind: "code",
+        views: [{ id: "source", label: "Source", kind: "source", language: "ts", value: "const a = 1" }],
+      },
+    })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot
+        runtime={runtime}
+        slotClassNames={{
+          messageActions: "custom-message-actions",
+          partActions: "custom-part-actions",
+          artifactContainer: "custom-artifact-container",
+          artifactTabs: "custom-artifact-tabs",
+          attachmentTray: "custom-attachment-tray",
+        }}
+      >
+        <>
+          <MessageList />
+          <AttachmentTray
+            attachments={[
+              {
+                file,
+                id: "composer-attachment-1",
+                mimeType: file.type,
+                name: file.name,
+                size: file.size,
+                status: "uploading",
+              },
+            ]}
+          />
+        </>
+      </ChatRoot>,
+    )
+
+    expect(screen.getByRole("button", { name: "Copy message" }).closest('[data-slot="message-actions"]')).toHaveClass(
+      "custom-message-actions",
+    )
+    expect(screen.getByRole("button", { name: "Copy text part" }).closest('[data-slot="part-actions"]')).toHaveClass(
+      "custom-part-actions",
+    )
+    expect(screen.getByText("const a = 1").closest('[data-slot="artifact-container"]')).toHaveClass(
+      "custom-artifact-container",
+    )
+    expect(screen.getByRole("button", { name: "Source" }).closest('[data-slot="artifact-tabs"]')).toHaveClass(
+      "custom-artifact-tabs",
+    )
+    expect(screen.getByText("draft.txt").closest('[data-slot="attachment-tray"]')).toHaveClass(
+      "custom-attachment-tray",
+    )
+  })
+
+  it("supports multi-class slotClassNames values for stable slots", () => {
+    const runtime = createChatRuntime({ conversationId: "slot-multi-class" })
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot
+        runtime={runtime}
+        slotClassNames={{
+          messageActions: "custom-message-actions custom-shared-actions",
+        }}
+      >
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByRole("button", { name: "Copy message" }).closest('[data-slot="message-actions"]')).toHaveClass(
+      "custom-message-actions",
+      "custom-shared-actions",
+    )
+  })
+
+  it("applies slotClassNames to newly added stable slot nodes without rescanning the root subtree", async () => {
+    const runtime = createChatRuntime({ conversationId: "slot-incremental" })
+    const file = new File(["hello"], "draft.txt", { type: "text/plain" })
+    const slotClassNames = {
+      attachmentTray: "custom-attachment-tray",
+    }
+
+    const { container, rerender } = render(
+      <ChatRoot runtime={runtime} slotClassNames={slotClassNames}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    const chatRootElement = container.firstElementChild as HTMLElement
+    const querySelectorAllSpy = vi.spyOn(chatRootElement, "querySelectorAll")
+
+    rerender(
+      <ChatRoot runtime={runtime} slotClassNames={slotClassNames}>
+        <>
+          <MessageList />
+          <AttachmentTray
+            attachments={[
+              {
+                file,
+                id: "composer-attachment-1",
+                mimeType: file.type,
+                name: file.name,
+                size: file.size,
+                status: "uploading",
+              },
+            ]}
+          />
+        </>
+      </ChatRoot>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("draft.txt").closest('[data-slot="attachment-tray"]')).toHaveClass(
+        "custom-attachment-tray",
+      )
+    })
+
+    expect(querySelectorAllSpy).not.toHaveBeenCalled()
+    querySelectorAllSpy.mockRestore()
   })
 
   it("exposes stable slots for reasoning toolcall and artifact-code blocks", () => {
