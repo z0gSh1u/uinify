@@ -24,6 +24,22 @@ Resolution order is:
 
 That pattern lets you keep the built-in `ArtifactContainer` shell and view switching while replacing only the body rendering for specific artifact kinds.
 
+## Built-In Defaults
+
+Without any registry overrides, the default artifact body renderer provides stronger built-in handling for these artifact kinds:
+
+- `code`: rendered in a `<pre><code>` block for code-oriented output.
+- `text`: string-valued views render as readable plain content with preserved line breaks.
+- `json`: rendered as formatted JSON when the view value is structured data or valid JSON text.
+
+Artifact kinds that do not match a keyed registry renderer and do not have a `renderArtifactFallback` override still stay readable through the shared default fallback path. Source views still render in a `<pre><code>` block, and other unmatched views render in a generic `<pre>` body.
+
+The container fallback behavior is also stable by default:
+
+- artifacts with no `views` show `No artifact views are available.` instead of rendering nothing
+
+These container states are separate from registry overrides. A custom `artifactRegistry` entry or `renderArtifactFallback` replaces the body rendering path for populated views, but the built-in container still handles view selection, headings, and the no-views empty state.
+
 ## Example
 
 ```tsx
