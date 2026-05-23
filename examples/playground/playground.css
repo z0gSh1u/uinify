@@ -19,17 +19,36 @@ body {
   padding: 32px;
 }
 
-.playground-header {
+.playground-hero {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  align-items: end;
   margin: 0 auto 24px;
   max-width: 1280px;
 }
 
-.playground-header h1,
-.playground-header p,
+.playground-hero h1,
+.playground-hero p,
+.playground-info-card h2,
 .playground-section h2,
 .playground-preview-header h2,
 .playground-preview-header p {
   margin-top: 0;
+}
+
+.playground-hero h1 {
+  max-width: 720px;
+  margin-bottom: 12px;
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+.playground-hero-copy > p:not(.playground-kicker) {
+  max-width: 560px;
+  color: #cbd5e1;
+  font-size: 1.125rem;
 }
 
 .playground-kicker {
@@ -37,6 +56,74 @@ body {
   color: #93c5fd;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.playground-command-card,
+.playground-info-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 24px 80px rgba(2, 6, 23, 0.28);
+}
+
+.playground-command-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+}
+
+.playground-command-card span {
+  color: #93c5fd;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.playground-command-card code {
+  color: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.playground-intro-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  margin: 0 auto 24px;
+  max-width: 1280px;
+}
+
+.playground-info-card {
+  padding: 20px;
+}
+
+.playground-info-card ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+  color: #cbd5e1;
+}
+
+.playground-docs-map > div {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.playground-docs-map a {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  color: #bfdbfe;
+  background: rgba(30, 41, 59, 0.5);
+  text-decoration: none;
+}
+
+.playground-docs-map small {
+  color: #cbd5e1;
 }
 
 .playground-layout {
@@ -117,6 +204,15 @@ body {
   }
 
   .playground-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-hero,
+  .playground-intro-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-docs-map > div {
     grid-template-columns: 1fr;
   }
 

@@ -21,6 +21,47 @@ vi.mock("react-virtuoso", () => ({
 }))
 
 describe("ExamplePlayground", () => {
+  it("presents the playground as a documentation entrypoint", () => {
+    render(<ExamplePlayground />)
+
+    expect(screen.getByRole("heading", { level: 1, name: "Build chat UI with uinify" })).toBeInTheDocument()
+    expect(screen.getByText("pnpm dev:example")).toBeInTheDocument()
+    expect(screen.getByText("React-first chat UI foundation for backend-agnostic LLM apps.")).toBeInTheDocument()
+
+    const checklist = screen.getByRole("region", { name: "Integration checklist" })
+    expect(within(checklist).getByText("Install package")).toBeInTheDocument()
+    expect(within(checklist).getByText("Import styles")).toBeInTheDocument()
+    expect(within(checklist).getByText("Create runtime")).toBeInTheDocument()
+    expect(within(checklist).getByText("Map events")).toBeInTheDocument()
+    expect(within(checklist).getByText("Render UI")).toBeInTheDocument()
+
+    const docsMap = screen.getByRole("navigation", { name: "Docs map" })
+    expect(within(docsMap).getByRole("link", { name: "Getting Started" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("getting-started.md"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "Core Concepts" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("core-concepts.md"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "Stream Mapping" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("stream-mapping.md"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "SSE" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("sse.md"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "Composer" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("composer-lexical.md"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "Styling" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("theming.md"),
+    )
+  })
+
   it("shows one selected template preview at a time", async () => {
     const user = userEvent.setup()
     const minimalTemplate = exampleTemplates.find((template) => template.id === "minimal")
