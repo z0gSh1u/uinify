@@ -32,8 +32,8 @@
 
 ## Docs And Example Coupling
 - The example playground in `examples/playground/App.tsx` is docs-backed product surface, not throwaway demo code.
-- Template metadata lives in `examples/fixtures.ts`; if you rename docs paths, section titles, or template labels, update that file and the tests that assert those exact strings.
-- The strongest regression checks for docs/example alignment are `examples/example-flows.test.tsx` and `examples/templates/templates.test.tsx`.
+- Template metadata lives in `examples/fixtures/index.ts`; if you rename docs paths, section titles, or template labels, update that file and the tests that assert those exact strings.
+- The strongest regression checks for docs/example alignment are `examples/tests/example-flows.test.tsx` and `examples/tests/templates.test.tsx`.
 
 ## Verification Expectations
 - Preferred lightweight verification after code changes: `pnpm typecheck && pnpm test`.

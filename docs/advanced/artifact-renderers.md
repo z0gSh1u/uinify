@@ -1,6 +1,6 @@
 # Artifact Renderers
 
-Artifacts are message parts with a typed container shape and one or more renderable `views`. The current model is `UiArtifactPart`, which wraps a `UiArtifact` with:
+Use this page after the [Core Concepts](../guides/core-concepts.md) guide and the [Examples](../guides/examples.md) template tour. Artifacts are message parts with a typed container shape and one or more renderable `views`. The current model is `UiArtifactPart`, which wraps a `UiArtifact` with:
 
 See the matching example template in `examples/templates/artifact-template.tsx`.
 

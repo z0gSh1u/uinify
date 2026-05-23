@@ -2,6 +2,8 @@
 
 `uinify` treats upload progression as host-owned state. The library renders attachment status, can create initial `queued` attachment records for composer-originated files, and includes non-removed attachments in composer submission. Your app is still responsible for upload orchestration and for updating attachment status as that work progresses.
 
+Start with [Core Concepts](../guides/core-concepts.md) if you have not separated host responsibilities from `uinify` runtime responsibilities yet. For the docs-backed template that matches this page, see [Examples](../guides/examples.md).
+
 See the matching example template in `examples/templates/upload-template.tsx`.
 
 There is no official upload client in the package today. Bring your own uploader, then reflect its progress back into the composer.

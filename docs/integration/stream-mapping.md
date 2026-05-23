@@ -4,6 +4,8 @@ Map your host or backend protocol into `UiStreamEvent` before it reaches the run
 
 See the matching example template in `examples/templates/adapter-template.tsx`.
 
+If your transport is Server-Sent Events, pair this page with [SSE Integration](./sse.md). For a broader tour of docs-backed templates, see [Examples](../guides/examples.md).
+
 For first-time adoption, the recommended default setup is to import `uinify/styles.css` once near your app entrypoint.
 
 ## Pattern

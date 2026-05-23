@@ -1,6 +1,6 @@
 # Stability Guide
 
-This page separates the surfaces intended for adoption from the surfaces that are useful for learning from the current implementation.
+This page separates the surfaces intended for adoption from the surfaces that are useful for learning from the current implementation. Read it after [Getting Started](../getting-started.md) and [Core Concepts](../guides/core-concepts.md) so the stable surface here has practical context.
 
 ## Recommended Surface
 

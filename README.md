@@ -35,5 +35,14 @@ The package currently exports more types and React primitives than the initial a
 ## Docs
 
 - [Getting Started](./docs/getting-started.md)
+- [Core Concepts](./docs/guides/core-concepts.md)
+- [Examples Guide](./docs/guides/examples.md)
 - [Stream Mapping](./docs/integration/stream-mapping.md)
+- [SSE Integration](./docs/integration/sse.md)
+- [Upload Lifecycle](./docs/integration/upload-lifecycle.md)
+- [Message List](./docs/components/message-list.md)
+- [Lexical Composer](./docs/components/composer-lexical.md)
+- [Theming](./docs/styling/theming.md)
+- [Stable Slots](./docs/styling/slots.md)
+- [Artifact Renderers](./docs/advanced/artifact-renderers.md)
 - [Stability Guide](./docs/advanced/stability.md)
