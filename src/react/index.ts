@@ -15,6 +15,16 @@ export {
 export { AttachmentPart, type AttachmentPartProps } from "./attachment-part"
 export { AttachmentTray, type AttachmentTrayProps } from "./attachment-tray"
 export {
+  getArtifactViewPayload,
+  getAvailableMessageActions,
+  getAvailablePartActions,
+  type UiMessageActionDescriptor,
+  type UiMessageActionId,
+  type UiOpenArtifactViewPayload,
+  type UiPartActionDescriptor,
+  type UiPartActionId,
+} from "./actions"
+export {
   ChatRoot,
   type ChatRootProps,
   type SlotClassNames,
