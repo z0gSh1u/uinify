@@ -58,6 +58,7 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
     name: incoming.name,
     mimeType: incoming.mimeType ?? current?.mimeType,
     size: incoming.size ?? current?.size,
+    sourceAttachmentId: incoming.sourceAttachmentId ?? current?.sourceAttachmentId,
   }
 
   switch (incoming.status) {
@@ -65,6 +66,7 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
       return {
         ...base,
         status: incoming.status,
+        ...(incoming.rejection ? { rejection: incoming.rejection } : {}),
       }
 
     case "uploading":
@@ -72,6 +74,7 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
         ...base,
         status: incoming.status,
         ...(incoming.progress !== undefined ? { progress: incoming.progress } : {}),
+        ...(incoming.rejection ? { rejection: incoming.rejection } : {}),
       }
 
     case "uploaded":
@@ -88,6 +91,7 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
         ...base,
         status: incoming.status,
         ...(incoming.error !== undefined ? { error: incoming.error } : {}),
+        ...(incoming.rejection ? { rejection: incoming.rejection } : {}),
       }
 
     case "removed":
@@ -95,6 +99,10 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
         id: incoming.id,
         name: incoming.name,
         status: incoming.status,
+        ...(incoming.sourceAttachmentId ?? current?.sourceAttachmentId
+          ? { sourceAttachmentId: incoming.sourceAttachmentId ?? current?.sourceAttachmentId }
+          : {}),
+        ...(incoming.rejection ? { rejection: incoming.rejection } : {}),
       }
   }
 }

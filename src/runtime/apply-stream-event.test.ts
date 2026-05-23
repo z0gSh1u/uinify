@@ -203,6 +203,105 @@ describe("applyStreamEvent", () => {
     })
   })
 
+  it("preserves sourceAttachmentId when a later upload update omits it", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const queued = applyStreamEvent(withMessage, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "queued",
+        sourceAttachmentId: "local-file-1",
+      },
+    })
+    const uploaded = applyStreamEvent(queued, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+
+    const attachmentPart = uploaded.messages[0]?.parts.find(
+      (part) => part.id === "attachment-1" && part.kind === "attachment",
+    )
+
+    expect(attachmentPart).toMatchObject({
+      id: "attachment-1",
+      kind: "attachment",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        sourceAttachmentId: "local-file-1",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+  })
+
+  it("clears stale attachment rejection when a later update succeeds", () => {
+    const withMessage = applyStreamEvent(emptyState, {
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+    const rejected = applyStreamEvent(withMessage, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "error",
+        sourceAttachmentId: "local-file-1",
+        rejection: {
+          code: "invalid-type",
+          message: "Unsupported file type",
+        },
+      },
+    })
+    const uploaded = applyStreamEvent(rejected, {
+      type: "part.attachment.updated",
+      messageId: "m1",
+      partId: "attachment-1",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+
+    const attachmentPart = uploaded.messages[0]?.parts.find(
+      (part) => part.id === "attachment-1" && part.kind === "attachment",
+    )
+
+    expect(attachmentPart).toMatchObject({
+      id: "attachment-1",
+      kind: "attachment",
+      attachment: {
+        id: "file-1",
+        name: "report.pdf",
+        status: "uploaded",
+        sourceAttachmentId: "local-file-1",
+        remoteUrl: "https://example.com/report.pdf",
+      },
+    })
+    expect(attachmentPart?.kind === "attachment" ? attachmentPart.attachment.rejection : undefined).toBe(
+      undefined,
+    )
+  })
+
   it("clears stale attachment error when a failed upload retries", () => {
     const withMessage = applyStreamEvent(emptyState, {
       type: "message.started",

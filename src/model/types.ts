@@ -31,15 +31,29 @@ export type UiToolCallPart = {
 
 export type UiAttachmentStatus = "queued" | "uploading" | "uploaded" | "error" | "removed"
 
+export type UiAttachmentRejectionCode =
+  | "file-too-large"
+  | "invalid-type"
+  | "too-many-files"
+  | "empty-file"
+  | "unknown"
+
+export type UiAttachmentRejection = {
+  code: UiAttachmentRejectionCode
+  message: string
+}
+
 export type UiAttachment = {
   id: string
   name: string
   mimeType?: string
   size?: number
   status: UiAttachmentStatus
+  sourceAttachmentId?: string
   progress?: number
   error?: string
   remoteUrl?: string
+  rejection?: UiAttachmentRejection
 }
 
 export type UiArtifactMetadataValue = string | number | boolean | null
