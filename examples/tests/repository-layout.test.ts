@@ -9,13 +9,13 @@ import { describe, expect, it } from "vitest"
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 
 const requiredDocs = [
-  { path: "docs/guides/core-concepts.md", heading: "# Core Concepts" },
-  { path: "docs/guides/examples.md", heading: "# Examples" },
-  { path: "docs/integration/sse.md", heading: "# SSE Integration" },
-  { path: "docs/components/message-list.md", heading: "# Message List" },
-  { path: "docs/components/composer-lexical.md", heading: "# Lexical Composer" },
-  { path: "docs/styling/theming.md", heading: "# Theming" },
-  { path: "docs/styling/slots.md", heading: "# Stable Slots" },
+  { path: "docs-site/src/content/docs/guides/core-concepts.mdx", heading: "title: Core Concepts" },
+  { path: "docs-site/src/content/docs/guides/examples.mdx", heading: "title: Examples" },
+  { path: "docs-site/src/content/docs/integration/sse.mdx", heading: "title: SSE Integration" },
+  { path: "docs-site/src/content/docs/components/message-list.mdx", heading: "title: Message List" },
+  { path: "docs-site/src/content/docs/components/composer-lexical.mdx", heading: "title: Lexical Composer" },
+  { path: "docs-site/src/content/docs/styling/theming.mdx", heading: "title: Theming" },
+  { path: "docs-site/src/content/docs/styling/slots.mdx", heading: "title: Stable Slots" },
 ] as const
 
 const planningSpecs = [
@@ -39,33 +39,31 @@ describe("repository layout", () => {
   })
 
   it("keeps the SSE guide example actionable with a local mapping helper", async () => {
-    const absolutePath = resolve(repoRoot, "docs/integration/sse.md")
+    const absolutePath = resolve(repoRoot, "docs-site/src/content/docs/integration/sse.mdx")
     const content = await readFile(absolutePath, "utf8")
 
     expect(content).toContain("function mapSsePayload")
   })
 
-  it("keeps the README pointed at the main user-facing docs tree", async () => {
+  it("keeps the README pointed at the docs site", async () => {
     const content = await readFile(resolve(repoRoot, "README.md"), "utf8")
 
-    expect(content).toContain("./docs/integration/upload-lifecycle.md")
-    expect(content).toContain("./docs/advanced/artifact-renderers.md")
+    expect(content).toContain("uinify docs")
+    expect(content).toContain("docs:dev")
   })
 
   it("moves internal planning material out of docs/", () => {
-    expect(existsSync(resolve(repoRoot, "docs/superpowers"))).toBe(false)
+    expect(existsSync(resolve(repoRoot, "docs"))).toBe(false)
 
     expect(existsSync(resolve(repoRoot, "planning/specs"))).toBe(true)
     expect(existsSync(resolve(repoRoot, "planning/plans"))).toBe(true)
 
     for (const file of planningSpecs) {
       expect(existsSync(resolve(repoRoot, "planning/specs", file))).toBe(true)
-      expect(existsSync(resolve(repoRoot, "docs/superpowers/specs", file))).toBe(false)
     }
 
     for (const file of planningPlans) {
       expect(existsSync(resolve(repoRoot, "planning/plans", file))).toBe(true)
-      expect(existsSync(resolve(repoRoot, "docs/superpowers/plans", file))).toBe(false)
     }
   })
 })

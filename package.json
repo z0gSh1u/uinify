@@ -32,7 +32,10 @@
     "build:example": "vite build --config vite.example.config.ts",
     "dev:example": "vite --config vite.example.config.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:dev": "pnpm --filter docs-site dev",
+    "docs:build": "pnpm --filter docs-site build",
+    "docs:preview": "pnpm --filter docs-site preview"
   },
   "dependencies": {
     "@lexical/react": "^0.15.0",

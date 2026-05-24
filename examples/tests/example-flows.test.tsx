@@ -38,27 +38,27 @@ describe("ExamplePlayground", () => {
     const docsMap = screen.getByRole("navigation", { name: "Docs map" })
     expect(within(docsMap).getByRole("link", { name: "Getting Started" })).toHaveAttribute(
       "href",
-      expect.stringContaining("getting-started.md"),
+      expect.stringContaining("getting-started"),
     )
     expect(within(docsMap).getByRole("link", { name: "Core Concepts" })).toHaveAttribute(
       "href",
-      expect.stringContaining("core-concepts.md"),
+      expect.stringContaining("core-concepts"),
     )
     expect(within(docsMap).getByRole("link", { name: "Stream Mapping" })).toHaveAttribute(
       "href",
-      expect.stringContaining("stream-mapping.md"),
+      expect.stringContaining("stream-mapping"),
     )
     expect(within(docsMap).getByRole("link", { name: "SSE" })).toHaveAttribute(
       "href",
-      expect.stringContaining("sse.md"),
+      expect.stringContaining("sse"),
     )
     expect(within(docsMap).getByRole("link", { name: "Composer" })).toHaveAttribute(
       "href",
-      expect.stringContaining("composer-lexical.md"),
+      expect.stringContaining("composer-lexical"),
     )
     expect(within(docsMap).getByRole("link", { name: "Styling" })).toHaveAttribute(
       "href",
-      expect.stringContaining("theming.md"),
+      expect.stringContaining("theming"),
     )
   })
 
@@ -74,7 +74,7 @@ describe("ExamplePlayground", () => {
     expect(screen.getByRole("button", { name: "Minimal app template" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getAllByRole("region", { name: "Selected template preview" })).toHaveLength(1)
     expect(minimalTemplate?.docsPath).toBe("docs/getting-started.md")
-    expect(screen.getByRole("link", { name: "Read docs" })).toHaveAttribute("href", expect.stringContaining("getting-started.md"))
+    expect(screen.getByRole("link", { name: "Read docs" })).toHaveAttribute("href", expect.stringContaining("getting-started"))
     expect(screen.getByRole("link", { name: "Read docs" })).not.toHaveAttribute("href", "docs/getting-started.md")
     expect(initialPreview).toHaveTextContent("Minimal app template")
     expect(within(initialPreview).queryByText("const customized = true")).not.toBeInTheDocument()
@@ -89,7 +89,7 @@ describe("ExamplePlayground", () => {
     expect(artifactTemplate?.docsPath).toBe("docs/advanced/artifact-renderers.md")
     expect(screen.getByRole("link", { name: "Read docs" })).toHaveAttribute(
       "href",
-      expect.stringContaining("artifact-renderers.md"),
+      expect.stringContaining("artifact-renderers"),
     )
     expect(screen.getByRole("link", { name: "Read docs" })).not.toHaveAttribute(
       "href",

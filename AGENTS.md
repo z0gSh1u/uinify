@@ -1,7 +1,7 @@
 # Repository Guide
 
 ## Scope
-- This repo is a single-package TypeScript library, not a monorepo.
+- This repo is a single-package TypeScript library with a docs site in `docs-site/`.
 - Treat `dist/` and `examples/playground/dist-example/` as generated output; do not edit them by hand.
 
 ## Primary Entry Points
@@ -29,6 +29,13 @@
 - The docs intentionally keep the recommended adoption surface narrow: `createChatRuntime`, `UiStreamEvent`, `createAdapterRunner`, `ChatRoot`, `MessageList`, and the documented styling hooks.
 - `examples/adapters/*` are reference-only examples. Do not treat them as stable compatibility layers or copy their shapes into public API decisions.
 - Styling stability is documented around `uinify/styles.css` tokens, `data-slot` regions, and `slotClassNames`; prefer those before changing renderer structure.
+
+## Docs Site
+
+- The docs site lives in `docs-site/` and uses Astro + Starlight.
+- User-facing docs are in `docs-site/src/content/docs/`.
+- Run locally with `pnpm docs:dev`, build with `pnpm docs:build`.
+- Do not edit the deleted `docs/` directory; its content has been migrated to `docs-site/src/content/docs/`.
 
 ## Docs And Example Coupling
 - The example playground in `examples/playground/App.tsx` is docs-backed product surface, not throwaway demo code.
