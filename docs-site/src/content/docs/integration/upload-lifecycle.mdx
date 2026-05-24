@@ -1,8 +1,131 @@
 ---
 title: Upload Lifecycle
-description: Handle file uploads in uinify.
+description: Host-owned upload progression reflected through the composer attachment tray.
 ---
 
-# Upload Lifecycle
+`uinify` treats upload progression as host-owned state. The library renders attachment status, can create initial `queued` attachment records for composer-originated files, and includes non-removed attachments in composer submission. Your app is still responsible for upload orchestration and for updating attachment status as that work progresses.
 
-Content coming soon.
+Start with [Core Concepts](/guides/core-concepts/) if you have not separated host responsibilities from `uinify` runtime responsibilities yet. For the docs-backed template that matches this page, see [Examples](/guides/examples/).
+
+See the matching example template in `examples/templates/upload-template.tsx`.
+
+There is no official upload client in the package today. Bring your own uploader, then reflect its progress back into the composer.
+
+## Host-owned Uploads
+
+Use `UiComposerAttachment[]` as the contract between your upload system and the composer.
+
+- Let the composer create initial `queued` attachments for picked or dropped files, or add equivalent `queued` records in host-controlled flows.
+- Move attachments to `uploading` while your host uploader is in flight.
+- Mark attachments `uploaded` once the host has a stable remote result, typically with `remoteUrl`.
+- Mark attachments `error` when upload fails and surface an `error` message for retry UI.
+- Host validation may reject an attachment before upload starts. In that case, return or render an attachment with `status: "error"`, a `rejection` object, and a stable `sourceAttachmentId` that points back to the original local attachment.
+- If the user cancels an in-flight upload, treat that as host-owned intent. Composer integrations may expose that through separate host-controlled UI, but the tray itself only reflects remove semantics unless the callback contract explicitly distinguishes cancel.
+- Remove attachments from the send payload by marking them `removed` or filtering removed items out of a controlled list.
+
+The composer does not perform upload network work on its own. It reflects the current `attachments` array and emits attachment list changes through `onAttachmentsChange`.
+
+## Composer Pattern
+
+The current `LexicalComposer` API supports both uncontrolled and controlled attachments, but the recommended integration pattern is a controlled list whose upload progression is managed by the host.
+
+```tsx
+import { useState } from "react"
+import type { UiComposerAttachment, UiComposerValue } from "uinify"
+import { LexicalComposer } from "uinify/composer/lexical"
+
+export function ChatComposer() {
+  const [attachments, setAttachments] = useState<UiComposerAttachment[]>([])
+
+  async function retryAttachment(target: UiComposerAttachment) {
+    setAttachments((current) =>
+      current.map((attachment) =>
+        attachment.id === target.id
+          ? { ...attachment, status: "uploading", error: undefined, progress: 0 }
+          : attachment,
+      ),
+    )
+
+    try {
+      const remoteUrl = await uploadAttachment(target)
+
+      setAttachments((current) =>
+        current.map((attachment) =>
+          attachment.id === target.id
+            ? { ...attachment, status: "uploaded", progress: 100, remoteUrl }
+            : attachment,
+        ),
+      )
+    } catch (error) {
+      setAttachments((current) =>
+        current.map((attachment) =>
+          attachment.id === target.id
+            ? {
+                ...attachment,
+                status: "error",
+                error: error instanceof Error ? error.message : "Upload failed",
+              }
+            : attachment,
+        ),
+      )
+    }
+  }
+
+  function handleSubmit(value: UiComposerValue) {
+    // value.attachments includes every attachment except ones marked `removed`.
+    console.log(value)
+    setAttachments([])
+  }
+
+  return (
+    <LexicalComposer
+      attachments={attachments}
+      onAttachmentsChange={setAttachments}
+      onAttachmentRetry={retryAttachment}
+      onSubmit={handleSubmit}
+      sendPolicy="uploaded-only"
+    />
+  )
+}
+
+async function uploadAttachment(_attachment: UiComposerAttachment) {
+  return "https://example.com/uploaded-file"
+}
+```
+
+Key props in this flow:
+
+- `attachments`: the host-controlled source of truth for the current attachment list.
+- `onAttachmentsChange`: called when the composer adds or removes attachments.
+- `onAttachmentRetry`: called when the user retries an attachment in `error`.
+- `onAttachmentCancel`: optional hook for uploading attachments in composer integrations that distinguish cancel intent from removal.
+- `sendPolicy`: set to `"uploaded-only"` to block submit until all non-removed attachments are `uploaded`, or leave the default `"allow-pending"` to submit while uploads are still pending.
+
+## Validation And Rejection Contract
+
+Host validation is authoritative. The composer can collect files and display what you provide, but your app decides whether a file is accepted.
+
+- Accepted files continue through `queued`, `uploading`, `uploaded`, and `error` based on host updates.
+- Rejected files should be represented with `status: "error"` plus `rejection.message` so the tray can show explicit validation feedback.
+- Use `sourceAttachmentId` on derived host records, especially rejected or later transcript attachments, to preserve continuity from the original local attachment entry.
+- Keep `sourceAttachmentId` stable across later lifecycle updates for the same underlying file so transcript rendering can communicate continuity clearly without exposing raw internal ids to end users.
+
+## Cancel Intent
+
+`uinify` does not abort your network client directly.
+
+- When `onAttachmentCancel` is provided, the composer forwards cancel intent for `uploading` attachments to the host.
+- When `onAttachmentCancel` is absent, removing an uploading attachment falls back to local removal behavior.
+- If your host turns a canceled upload into an `error` or `removed` entry, send that updated attachment state back through your controlled list.
+
+## Required States
+
+The current attachment lifecycle surface expects these states:
+
+- `queued`
+- `uploading`
+- `uploaded`
+- `error`
+- `removed`
+
+When `sendPolicy` is `"uploaded-only"`, every non-removed attachment must reach `uploaded` before the Send button becomes enabled.

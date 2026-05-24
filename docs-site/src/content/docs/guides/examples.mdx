@@ -1,8 +1,47 @@
 ---
 title: Examples
-description: Practical examples of using uinify.
+description: Copyable starting points for common uinify integration shapes.
 ---
 
-# Examples
+The example templates are copyable starting points, not separate APIs. Use them to choose an integration shape, then keep your production code anchored to the public package surface.
 
-Content coming soon.
+## Pick A Starting Point
+
+- `examples/templates/minimal-app.tsx`: smallest runtime plus transcript wiring
+- `examples/templates/adapter-template.tsx`: host-event mapping with `createAdapterRunner`
+- `examples/templates/upload-template.tsx`: controlled attachment lifecycle
+- `examples/templates/artifact-template.tsx`: artifact renderer overrides
+
+## Common Paths
+
+If you are just proving out rendering, start with the minimal template:
+
+```tsx
+import { useState } from "react"
+import { createChatRuntime } from "uinify"
+import { ChatRoot, MessageList } from "uinify/react"
+
+export function App() {
+  const [runtime] = useState(() => createChatRuntime({ conversationId: "demo" }))
+
+  return (
+    <ChatRoot runtime={runtime}>
+      <MessageList />
+    </ChatRoot>
+  )
+}
+```
+
+If you already have a backend protocol, move to the adapter template and normalize host events before dispatch.
+
+## How To Read The Examples
+
+- Treat `examples/templates/*` as docs-backed recipes.
+- Treat `examples/adapters/*` as reference-only protocol mappers.
+- Copy the pattern, not the exact fixture ids or example labels.
+
+## Where To Go Next
+
+- For the mental model, see [Core Concepts](/guides/core-concepts/).
+- For transport normalization, see [Stream Mapping](/integration/stream-mapping/).
+- For SSE transport wiring, see [SSE Integration](/integration/sse/).
