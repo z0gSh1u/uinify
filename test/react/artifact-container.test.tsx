@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { UiArtifactPart } from "../model/types"
-import { ArtifactContainer } from "./artifact-container"
-import { RenderersProvider } from "./renderers"
+import type { UiArtifactPart } from "../../src/model/types"
+import { ArtifactContainer } from "../../src/react/artifact-container"
+import { RenderersProvider } from "../../src/react/renderers"
 
 function createPart(overrides?: Partial<UiArtifactPart["artifact"]>): UiArtifactPart {
   return {

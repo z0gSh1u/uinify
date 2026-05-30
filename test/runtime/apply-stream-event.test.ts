@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { UiRuntimeState } from "../model/types"
-import { applyStreamEvent } from "./apply-stream-event"
+import type { UiRuntimeState } from "../../src/model/types"
+import { applyStreamEvent } from "../../src/runtime/apply-stream-event"
 
 const emptyState: UiRuntimeState = {
   conversationId: "demo",
@@ -11,7 +11,7 @@ const emptyState: UiRuntimeState = {
 }
 
 describe("applyStreamEvent", () => {
-  it("merges text, reasoning, tool calls, and artifacts into one message", () => {
+  it("merges text, reasoning, steps, and artifacts into one message", () => {
     const withMessage = applyStreamEvent(emptyState, {
       type: "message.started",
       messageId: "m1",
@@ -29,15 +29,21 @@ describe("applyStreamEvent", () => {
       partId: "p2",
       delta: "Thinking...",
     })
-    const withTool = applyStreamEvent(withReasoning, {
-      type: "part.tool.updated",
+    const withStep = applyStreamEvent(withReasoning, {
+      type: "part.step.started",
       messageId: "m1",
       partId: "p3",
-      toolName: "web_search",
-      status: "running",
+      category: "tool",
+      label: "web_search",
       inputSummary: "query=uinify",
     })
-    const complete = applyStreamEvent(withTool, {
+    const completedStep = applyStreamEvent(withStep, {
+      type: "part.step.completed",
+      messageId: "m1",
+      partId: "p3",
+      outputSummary: "1 result",
+    })
+    const complete = applyStreamEvent(completedStep, {
       type: "part.artifact.emitted",
       messageId: "m1",
       partId: "p4",
@@ -74,11 +80,12 @@ describe("applyStreamEvent", () => {
       { id: "p2", kind: "reasoning", text: "Thinking...", state: "streaming" },
       {
         id: "p3",
-        kind: "tool-call",
-        toolName: "web_search",
-        status: "running",
+        kind: "step",
+        category: "tool",
+        status: "complete",
+        label: "web_search",
         inputSummary: "query=uinify",
-        outputSummary: null,
+        outputSummary: "1 result",
       },
       {
         id: "p4",
@@ -113,6 +120,38 @@ describe("applyStreamEvent", () => {
     ])
   })
 
+  it("applies step events as the unified agent execution part", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "assistant" })
+    state = applyStreamEvent(state, {
+      type: "part.step.started",
+      messageId: "m1",
+      partId: "s1",
+      category: "tool",
+      label: "Search docs",
+      inputSummary: "query: SSE support",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.completed",
+      messageId: "m1",
+      partId: "s1",
+      outputSummary: "Found the SSE guide.",
+    })
+
+    expect(state.messages[0]?.parts).toEqual([
+      {
+        id: "s1",
+        kind: "step",
+        category: "tool",
+        status: "complete",
+        label: "Search docs",
+        inputSummary: "query: SSE support",
+        outputSummary: "Found the SSE guide.",
+      },
+    ])
+  })
+
   it("records a warning instead of crashing on out-of-order delta", () => {
     const next = applyStreamEvent(emptyState, {
       type: "part.text.delta",
@@ -125,36 +164,206 @@ describe("applyStreamEvent", () => {
     expect(next.messages).toEqual([])
   })
 
-  it("preserves existing tool summaries when an update omits them", () => {
-    const withMessage = applyStreamEvent(emptyState, {
-      type: "message.started",
+  it("merges step updates without dropping existing fields", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "assistant" })
+    state = applyStreamEvent(state, {
+      type: "part.step.started",
       messageId: "m1",
-      role: "assistant",
-    })
-    const withTool = applyStreamEvent(withMessage, {
-      type: "part.tool.updated",
-      messageId: "m1",
-      partId: "tool-1",
-      toolName: "web_search",
-      status: "running",
+      partId: "step-1",
+      category: "retrieval",
+      label: "Search docs",
       inputSummary: "query=uinify",
-      outputSummary: "1 result",
     })
-    const updated = applyStreamEvent(withTool, {
-      type: "part.tool.updated",
+    state = applyStreamEvent(state, {
+      type: "part.step.updated",
       messageId: "m1",
-      partId: "tool-1",
-      toolName: "web_search",
-      status: "complete",
+      partId: "step-1",
+      summary: "Checking docs index",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.failed",
+      messageId: "m1",
+      partId: "step-1",
+      error: "Search backend unavailable",
     })
 
-    expect(updated.messages[0]?.parts).toContainEqual({
-      id: "tool-1",
-      kind: "tool-call",
-      toolName: "web_search",
-      status: "complete",
+    expect(state.messages[0]?.parts).toContainEqual({
+      id: "step-1",
+      kind: "step",
+      category: "retrieval",
+      status: "error",
+      label: "Search docs",
       inputSummary: "query=uinify",
-      outputSummary: "1 result",
+      summary: "Checking docs index",
+      error: "Search backend unavailable",
+    })
+  })
+
+  it("clears stale terminal fields when a failed step starts again", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "assistant" })
+    state = applyStreamEvent(state, {
+      type: "part.step.started",
+      messageId: "m1",
+      partId: "step-1",
+      category: "tool",
+      label: "Search docs",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.failed",
+      messageId: "m1",
+      partId: "step-1",
+      error: "Search failed",
+      outputSummary: "No results",
+      completedAt: "2026-05-30T01:00:00.000Z",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.started",
+      messageId: "m1",
+      partId: "step-1",
+      category: "tool",
+      label: "Search docs",
+      inputSummary: "retry query",
+      startedAt: "2026-05-30T01:01:00.000Z",
+    })
+
+    expect(state.messages[0]?.parts).toContainEqual({
+      id: "step-1",
+      kind: "step",
+      category: "tool",
+      status: "running",
+      label: "Search docs",
+      inputSummary: "retry query",
+      startedAt: "2026-05-30T01:01:00.000Z",
+    })
+  })
+
+  it("clears stale error when a failed step later completes", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "assistant" })
+    state = applyStreamEvent(state, {
+      type: "part.step.started",
+      messageId: "m1",
+      partId: "step-1",
+      category: "retrieval",
+      label: "Search docs",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.failed",
+      messageId: "m1",
+      partId: "step-1",
+      error: "Search failed",
+    })
+    state = applyStreamEvent(state, {
+      type: "part.step.completed",
+      messageId: "m1",
+      partId: "step-1",
+      outputSummary: "Found docs",
+      completedAt: "2026-05-30T01:02:00.000Z",
+    })
+
+    expect(state.messages[0]?.parts).toContainEqual({
+      id: "step-1",
+      kind: "step",
+      category: "retrieval",
+      status: "complete",
+      label: "Search docs",
+      outputSummary: "Found docs",
+      completedAt: "2026-05-30T01:02:00.000Z",
+    })
+  })
+
+  it("applies image emitted events", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "user" })
+    state = applyStreamEvent(state, {
+      type: "part.image.emitted",
+      messageId: "m1",
+      partId: "img1",
+      image: {
+        url: "blob:http://localhost/image",
+        alt: "Uploaded diagram",
+        mimeType: "image/png",
+        sourceAttachmentId: "attachment-1",
+      },
+    })
+
+    expect(state.messages[0]?.parts).toEqual([
+      {
+        id: "img1",
+        kind: "image",
+        url: "blob:http://localhost/image",
+        alt: "Uploaded diagram",
+        mimeType: "image/png",
+        sourceAttachmentId: "attachment-1",
+      },
+    ])
+  })
+
+  it("upserts image emitted events by part id", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "user" })
+    state = applyStreamEvent(state, {
+      type: "part.image.emitted",
+      messageId: "m1",
+      partId: "img1",
+      image: {
+        url: "blob:http://localhost/image",
+        alt: "Original diagram",
+      },
+    })
+    state = applyStreamEvent(state, {
+      type: "part.image.emitted",
+      messageId: "m1",
+      partId: "img1",
+      image: {
+        url: "https://cdn.example.com/image.png",
+        alt: "Uploaded diagram",
+        mimeType: "image/png",
+        width: 640,
+        height: 480,
+        sourceAttachmentId: "attachment-1",
+      },
+    })
+
+    expect(state.messages[0]?.parts).toEqual([
+      {
+        id: "img1",
+        kind: "image",
+        url: "https://cdn.example.com/image.png",
+        alt: "Uploaded diagram",
+        mimeType: "image/png",
+        width: 640,
+        height: 480,
+        sourceAttachmentId: "attachment-1",
+      },
+    ])
+  })
+
+  it("uses partId and the event type as image part identity", () => {
+    let state = emptyState
+
+    state = applyStreamEvent(state, { type: "message.started", messageId: "m1", role: "user" })
+    state = applyStreamEvent(state, {
+      type: "part.image.emitted",
+      messageId: "m1",
+      partId: "img-from-event",
+      image: {
+        url: "https://example.com/image.png",
+        alt: "Event-owned identity",
+      },
+    })
+
+    expect(state.messages[0]?.parts[0]).toMatchObject({
+      id: "img-from-event",
+      kind: "image",
+      url: "https://example.com/image.png",
     })
   })
 

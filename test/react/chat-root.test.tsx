@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { createChatRuntime } from "../runtime/create-chat-runtime"
-import { AttachmentTray } from "./attachment-tray"
-import { ChatRoot, useChatRuntime } from "./chat-root"
-import { MessageList } from "./message-list"
+import { createChatRuntime } from "../../src/runtime/create-chat-runtime"
+import { AttachmentTray } from "../../src/react/attachment-tray"
+import { ChatRoot, useChatRuntime } from "../../src/react/chat-root"
+import { MessageList } from "../../src/react/message-list"
 
 vi.mock("react-virtuoso", () => ({
   Virtuoso: ({
@@ -154,6 +154,101 @@ describe("ChatRoot", () => {
     )
   })
 
+  it("applies slotClassNames to step and image slots", () => {
+    const runtime = createChatRuntime({ conversationId: "step-image-slots" })
+
+    render(
+      <ChatRoot
+        runtime={runtime}
+        slotClassNames={{
+          step: "custom-step-slot",
+          image: "custom-image-slot",
+        }}
+      >
+        <MessageList
+          messages={[
+            {
+              id: "m1",
+              role: "assistant",
+              state: "complete",
+              feedback: "none",
+              parts: [
+                {
+                  id: "step-1",
+                  kind: "step",
+                  category: "tool",
+                  status: "complete",
+                  label: "Search docs",
+                  outputSummary: "Found docs",
+                },
+                {
+                  id: "image-1",
+                  kind: "image",
+                  url: "https://example.com/diagram.png",
+                  alt: "Architecture diagram",
+                },
+              ],
+            },
+          ]}
+        />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("Search docs").closest('[data-slot="step"]')).toHaveClass("custom-step-slot")
+    expect(screen.getByRole("img", { name: "Architecture diagram" }).closest('[data-slot="image"]')).toHaveClass(
+      "custom-image-slot",
+    )
+  })
+
+  it("applies slotClassNames to step and image slots when renderers are overridden", () => {
+    const runtime = createChatRuntime({ conversationId: "overridden-step-image-slots" })
+
+    render(
+      <ChatRoot
+        renderers={{
+          renderStep: ({ part }) => <div>custom step {part.label}</div>,
+          renderImage: ({ part }) => <div>custom image {part.alt}</div>,
+        }}
+        runtime={runtime}
+        slotClassNames={{
+          step: "custom-step-slot",
+          image: "custom-image-slot",
+        }}
+      >
+        <MessageList
+          messages={[
+            {
+              id: "m1",
+              role: "assistant",
+              state: "complete",
+              feedback: "none",
+              parts: [
+                {
+                  id: "step-1",
+                  kind: "step",
+                  category: "tool",
+                  status: "complete",
+                  label: "Search docs",
+                },
+                {
+                  id: "image-1",
+                  kind: "image",
+                  url: "https://example.com/diagram.png",
+                  alt: "Architecture diagram",
+                },
+              ],
+            },
+          ]}
+        />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("custom step Search docs").closest('[data-slot="step"]')).toHaveClass("custom-step-slot")
+    expect(screen.getByText("custom image Architecture diagram").closest('[data-slot="image"]')).toHaveClass(
+      "custom-image-slot",
+    )
+  })
+
   it("applies slotClassNames to newly added stable slot nodes without rescanning the root subtree", async () => {
     const runtime = createChatRuntime({ conversationId: "slot-incremental" })
     const file = new File(["hello"], "draft.txt", { type: "text/plain" })
@@ -200,19 +295,10 @@ describe("ChatRoot", () => {
     querySelectorAllSpy.mockRestore()
   })
 
-  it("exposes stable slots for reasoning toolcall and artifact-code blocks", () => {
+  it("exposes stable slots for reasoning and artifact-code blocks", () => {
     const runtime = createChatRuntime({ conversationId: "demo" })
     runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
     runtime.dispatch({ type: "part.reasoning.delta", messageId: "m1", partId: "p1", delta: "Think" })
-    runtime.dispatch({
-      type: "part.tool.updated",
-      messageId: "m1",
-      partId: "p2",
-      toolName: "search",
-      status: "complete",
-      inputSummary: "query",
-      outputSummary: "done",
-    })
     runtime.dispatch({
       type: "part.artifact.emitted",
       messageId: "m1",
@@ -240,7 +326,6 @@ describe("ChatRoot", () => {
     )
 
     expect(screen.getByRole("button", { name: "Show reasoning" }).closest('[data-slot="reasoning"]')).toBeTruthy()
-    expect(screen.getByText("search").closest('[data-slot="toolcall"]')).toBeTruthy()
     expect(screen.getByText("const answer = 42").closest('[data-slot="artifact-code"]')).toBeTruthy()
   })
 
@@ -376,15 +461,6 @@ describe("ChatRoot", () => {
     runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
     runtime.dispatch({ type: "part.reasoning.delta", messageId: "m1", partId: "p2", delta: "Think" })
     runtime.dispatch({
-      type: "part.tool.updated",
-      messageId: "m1",
-      partId: "p4",
-      toolName: "searchDocs",
-      status: "complete",
-      inputSummary: "query",
-      outputSummary: "result",
-    })
-    runtime.dispatch({
       type: "part.artifact.emitted",
       messageId: "m1",
       partId: "p3",
@@ -456,23 +532,6 @@ describe("ChatRoot", () => {
       partKind: "reasoning",
     })
 
-    const toolCallActions = screen.getByText("searchDocs").closest('[data-slot="message-part"]')
-
-    expect(toolCallActions).toBeTruthy()
-
-    const toolCallActionRow = within(toolCallActions as HTMLElement).getByRole("group", {
-      name: "Tool call part actions",
-    })
-
-    fireEvent.click(within(toolCallActionRow).getByRole("button", { name: "Tool details" }))
-
-    expect(onPartAction).toHaveBeenCalledWith({
-      action: "toggle-tool-details",
-      messageId: "m1",
-      partId: "p4",
-      partKind: "tool-call",
-    })
-
     const artifactPart = screen.getByText("rendered").closest('[data-slot="message-part"]')
 
     expect(artifactPart).toBeTruthy()
@@ -522,45 +581,6 @@ describe("ChatRoot", () => {
       messageId: "m1",
       partId: "p1",
       partKind: "reasoning",
-    })
-  })
-
-  it("reports tool detail surface toggles through onPartAction", () => {
-    const runtime = createChatRuntime({ conversationId: "demo" })
-    const onPartAction = vi.fn()
-
-    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
-    runtime.dispatch({
-      type: "part.tool.updated",
-      messageId: "m1",
-      partId: "p1",
-      toolName: "searchDocs",
-      status: "complete",
-      inputSummary: "query",
-      outputSummary: "result",
-    })
-    runtime.dispatch({ type: "message.completed", messageId: "m1" })
-
-    render(
-      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
-        <MessageList />
-      </ChatRoot>,
-    )
-
-    fireEvent.click(screen.getByRole("button", { name: "Show tool details" }))
-    fireEvent.click(screen.getByRole("button", { name: "Hide tool details" }))
-
-    expect(onPartAction).toHaveBeenNthCalledWith(1, {
-      action: "toggle-tool-details",
-      messageId: "m1",
-      partId: "p1",
-      partKind: "tool-call",
-    })
-    expect(onPartAction).toHaveBeenNthCalledWith(2, {
-      action: "toggle-tool-details",
-      messageId: "m1",
-      partId: "p1",
-      partKind: "tool-call",
     })
   })
 

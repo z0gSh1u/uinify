@@ -10,8 +10,8 @@ import {
   type TextNode,
 } from "lexical"
 import { describe, expect, it, vi } from "vitest"
-import { SlashCommandPlugin } from "./slash-command-plugin"
-import { LexicalComposer } from "../lexical-composer"
+import { SlashCommandPlugin } from "../../../../src/composer/lexical/plugins/slash-command-plugin"
+import { LexicalComposer } from "../../../../src/composer/lexical/lexical-composer"
 
 function getEditor(element: HTMLElement) {
   return (element as HTMLElement & { __lexicalEditor?: LexicalEditor }).__lexicalEditor
@@ -82,9 +82,9 @@ describe("SlashCommandPlugin", () => {
 
     render(
       <SlashCommandPlugin
-        items={[
-          { id: "agent", label: "agent", insertText: "/agent " },
-          { id: "draft", label: "draft", insertText: "/draft " },
+        commands={[
+          { id: "agent", kind: "agent", label: "agent", insertText: "/agent ", trigger: "/" },
+          { id: "draft", kind: "slash", label: "draft", insertText: "/draft ", trigger: "/" },
         ]}
         onSelect={onSelect}
         query="/ag"
@@ -98,8 +98,10 @@ describe("SlashCommandPlugin", () => {
 
     expect(onSelect).toHaveBeenCalledWith({
       id: "agent",
+      kind: "agent",
       label: "agent",
       insertText: "/agent ",
+      trigger: "/",
     })
   })
 
@@ -108,8 +110,8 @@ describe("SlashCommandPlugin", () => {
 
     render(
       <LexicalComposer
+        commands={[{ id: "agent", kind: "agent", label: "agent", insertText: "/agent ", trigger: "/" }]}
         onSubmit={() => undefined}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />, 
     )
 
@@ -133,8 +135,8 @@ describe("SlashCommandPlugin", () => {
 
     render(
       <LexicalComposer
+        commands={[{ id: "agent", kind: "agent", label: "agent", insertText: "/agent ", trigger: "/" }]}
         onSubmit={() => undefined}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 
@@ -158,8 +160,8 @@ describe("SlashCommandPlugin", () => {
 
     render(
       <LexicalComposer
+        commands={[{ id: "agent", kind: "agent", label: "agent", insertText: "/agent ", trigger: "/" }]}
         onSubmit={() => undefined}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 
@@ -183,8 +185,8 @@ describe("SlashCommandPlugin", () => {
 
     render(
       <LexicalComposer
+        commands={[{ id: "agent", kind: "agent", label: "agent", insertText: "/agent ", trigger: "/" }]}
         onSubmit={() => undefined}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 

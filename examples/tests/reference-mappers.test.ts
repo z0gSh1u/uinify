@@ -41,11 +41,19 @@ describe("OpenAI-like reference mapper", () => {
         delta: "world!",
       },
       {
-        type: "part.tool.updated",
+        type: "part.step.started",
         messageId: "msg_openai_like_1",
         partId: "tool_openai_like_1",
-        toolName: "searchDocs",
-        status: "complete",
+        category: "tool",
+        label: "searchDocs",
+        inputSummary: "query: reference mappers",
+      },
+      {
+        type: "part.step.completed",
+        messageId: "msg_openai_like_1",
+        partId: "tool_openai_like_1",
+        category: "tool",
+        label: "searchDocs",
         inputSummary: "query: reference mappers",
         outputSummary: "3 results returned",
       },
@@ -86,6 +94,30 @@ describe("OpenAI-like reference mapper", () => {
     ])
   })
 
+  it("keeps partial tool argument text as input summary instead of throwing", () => {
+    expect(
+      mapOpenAiLikeChunk({
+        type: "response.tool.updated",
+        response_id: "msg_openai_like_partial_args",
+        tool_call: {
+          call_id: "tool_openai_like_partial_args",
+          name: "searchDocs",
+          phase: "in_progress",
+          arguments_text: '{"query":"partial',
+        },
+      }),
+    ).toEqual<UiStreamEvent[]>([
+      {
+        type: "part.step.started",
+        messageId: "msg_openai_like_partial_args",
+        partId: "tool_openai_like_partial_args",
+        category: "tool",
+        label: "searchDocs",
+        inputSummary: 'arguments: {"query":"partial',
+      },
+    ])
+  })
+
   it("dispatches mapped events into the runtime and produces the expected message parts", () => {
     const runtime = createChatRuntime({ conversationId: "reference-mapper-example" })
 
@@ -107,9 +139,10 @@ describe("OpenAI-like reference mapper", () => {
           },
           {
             id: "tool_openai_like_1",
-            kind: "tool-call",
-            toolName: "searchDocs",
+            kind: "step",
+            category: "tool",
             status: "complete",
+            label: "searchDocs",
             inputSummary: "query: reference mappers",
             outputSummary: "3 results returned",
           },
@@ -172,9 +205,10 @@ describe("OpenAI-like reference mapper", () => {
           },
           {
             id: "tool_openai_like_1",
-            kind: "tool-call",
-            toolName: "searchDocs",
+            kind: "step",
+            category: "tool",
             status: "complete",
+            label: "searchDocs",
             inputSummary: "query: reference mappers",
             outputSummary: "3 results returned",
           },
@@ -227,7 +261,7 @@ describe("Agent-like reference mapper", () => {
     })
   })
 
-  it("maps tool lifecycle updates for started and failed branches", () => {
+  it("maps tool lifecycle updates to step events for started and failed branches", () => {
     expect(
       ([
         {
@@ -258,23 +292,63 @@ describe("Agent-like reference mapper", () => {
       ] satisfies AgentLikeEvent[]).flatMap(mapAgentLikeEvent),
     ).toEqual<UiStreamEvent[]>([
       {
-        type: "part.tool.updated",
+        type: "part.step.started",
         messageId: "agent_msg_tool_status",
         partId: "agent_tool_status",
-        toolName: "searchDocs",
-        status: "running",
+        category: "tool",
+        label: "searchDocs",
         inputSummary: "query: tool lifecycle",
       },
       {
-        type: "part.tool.updated",
+        type: "part.step.failed",
         messageId: "agent_msg_tool_status",
         partId: "agent_tool_status",
-        toolName: "searchDocs",
-        status: "error",
+        category: "tool",
+        label: "searchDocs",
         inputSummary: "query: tool lifecycle",
-        outputSummary: "Search backend unavailable",
+        error: "Search backend unavailable",
       },
     ])
+  })
+
+  it("does not warn when an adapter runner sees a step complete after an earlier start", () => {
+    const messageStarted = adaptAgentLikeEvent({
+      type: "agent.message.started",
+      runId: "run_agent_like_tool_status",
+      message: {
+        id: "agent_msg_tool_status",
+        role: "assistant",
+      },
+    })
+    const started = adaptAgentLikeEvent({
+      type: "agent.tool.started",
+      runId: "run_agent_like_tool_status",
+      messageId: "agent_msg_tool_status",
+      tool: {
+        id: "agent_tool_status",
+        name: "searchDocs",
+        input: {
+          query: "tool lifecycle",
+        },
+      },
+    })
+    const completed = adaptAgentLikeEvent({
+      type: "agent.tool.completed",
+      runId: "run_agent_like_tool_status",
+      messageId: "agent_msg_tool_status",
+      tool: {
+        id: "agent_tool_status",
+        name: "searchDocs",
+        input: {
+          query: "tool lifecycle",
+        },
+        resultSummary: "3 results returned",
+      },
+    })
+
+    expect(messageStarted.diagnostics).toEqual([])
+    expect(started.diagnostics).toEqual([])
+    expect(completed.diagnostics).toEqual([])
   })
 
   it("dispatches mapped workflow events into the runtime and preserves the final assistant state", () => {
@@ -302,9 +376,10 @@ describe("Agent-like reference mapper", () => {
           },
           {
             id: "agent_tool_1",
-            kind: "tool-call",
-            toolName: "searchDocs",
+            kind: "step",
+            category: "tool",
             status: "complete",
+            label: "searchDocs",
             inputSummary: "query: reference mapper adapter example",
             outputSummary: "Found runtime API and example fixture references",
           },

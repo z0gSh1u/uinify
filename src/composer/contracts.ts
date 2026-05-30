@@ -21,15 +21,46 @@ export type UiComposerAttachmentValidationResult =
   | UiComposerAttachmentValidationAccepted
   | UiComposerAttachmentValidationRejected
 
-export type UiComposerChoice = {
+export type UiComposerCommandKind =
+  | "slash"
+  | "mention"
+  | "agent"
+  | "tool"
+  | "skill"
+  | "mcp"
+  | "custom"
+
+export type UiComposerCommandTrigger = "/" | "@"
+
+export type UiComposerCommand = {
   id: string
+  kind: UiComposerCommandKind
   label: string
   insertText: string
+  trigger?: UiComposerCommandTrigger
+  description?: string
+  group?: string
+  disabledReason?: string
+  metadata?: Record<string, unknown>
+}
+
+export type UiComposerCommandSelection = {
+  id: string
+  kind: UiComposerCommandKind
+  label: string
+  insertText: string
+  trigger: UiComposerCommandTrigger
+  range: {
+    start: number
+    end: number
+  }
+  description?: string
+  group?: string
+  metadata?: Record<string, unknown>
 }
 
 export type UiComposerValue = {
   text: string
   attachments: UiComposerAttachment[]
-  commands: string[]
-  mentions: string[]
+  commands: UiComposerCommandSelection[]
 }

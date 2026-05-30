@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { collectAttachments, createAttachmentHandlers } from "./attachment-plugin"
-import { LexicalComposer } from "../lexical-composer"
+import { collectAttachments, createAttachmentHandlers } from "../../../../src/composer/lexical/plugins/attachment-plugin"
+import { LexicalComposer } from "../../../../src/composer/lexical/lexical-composer"
 
 describe("attachment-plugin", () => {
   it("collectAttachments creates queued attachments with canonical file metadata and unique ids across calls", () => {
@@ -28,6 +28,40 @@ describe("attachment-plugin", () => {
       }),
     ])
     expect(first[0]?.id).not.toBe(second[0]?.id)
+  })
+
+  it("collectAttachments uses a deterministic image fallback when the file name is empty", () => {
+    const file = new File(["image-bytes"], "", { type: "image/png" })
+    const [attachment] = collectAttachments([file])
+
+    expect(attachment).toEqual(
+      expect.objectContaining({
+        file,
+        name: "pasted-image.png",
+        mimeType: "image/png",
+        size: file.size,
+        status: "queued",
+      }),
+    )
+    expect(attachment?.id).toContain("pasted-image.png")
+    expect(attachment?.id).not.toMatch(/-$/)
+  })
+
+  it("collectAttachments uses a deterministic file fallback when a non-image file name is empty", () => {
+    const file = new File(["notes"], "", { type: "text/plain" })
+    const [attachment] = collectAttachments([file])
+
+    expect(attachment).toEqual(
+      expect.objectContaining({
+        file,
+        name: "pasted-file.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
+      }),
+    )
+    expect(attachment?.id).toContain("pasted-file.txt")
+    expect(attachment?.id).not.toMatch(/-$/)
   })
 
   it("createAttachmentHandlers only prevents default when handling file attachments", () => {
@@ -65,6 +99,73 @@ describe("attachment-plugin", () => {
     expect(preventPasteDefault).toHaveBeenCalledTimes(1)
     expect(preventFileDropDefault).toHaveBeenCalledTimes(1)
     expect(preventTextDropDefault).not.toHaveBeenCalled()
+  })
+
+  it("preserves pasted image file metadata", () => {
+    const onAdd = vi.fn()
+    const preventDefault = vi.fn()
+    const file = new File(["image-bytes"], "diagram.png", { type: "image/png" })
+    const handlers = createAttachmentHandlers(onAdd)
+
+    handlers.onPaste({
+      clipboardData: { files: [file] },
+      preventDefault,
+    } as never)
+
+    expect(onAdd).toHaveBeenCalledWith([
+      expect.objectContaining({
+        file,
+        name: "diagram.png",
+        mimeType: "image/png",
+        size: file.size,
+        status: "queued",
+      }),
+    ])
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves dropped image file metadata", () => {
+    const onAdd = vi.fn()
+    const preventDefault = vi.fn()
+    const file = new File(["image-bytes"], "dropped.jpg", { type: "image/jpeg" })
+    const handlers = createAttachmentHandlers(onAdd)
+
+    handlers.onDrop({
+      dataTransfer: { files: [file] },
+      preventDefault,
+    } as never)
+
+    expect(onAdd).toHaveBeenCalledWith([
+      expect.objectContaining({
+        file,
+        name: "dropped.jpg",
+        mimeType: "image/jpeg",
+        size: file.size,
+        status: "queued",
+      }),
+    ])
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps non-image pasted attachments on the queued lifecycle", () => {
+    const onAdd = vi.fn()
+    const file = new File(["notes"], "notes.txt", { type: "text/plain" })
+    const handlers = createAttachmentHandlers(onAdd)
+
+    handlers.onPaste({
+      clipboardData: { files: [file] },
+      preventDefault: vi.fn(),
+    } as never)
+
+    expect(onAdd).toHaveBeenCalledWith([
+      expect.objectContaining({
+        file,
+        name: "notes.txt",
+        mimeType: "text/plain",
+        size: file.size,
+        status: "queued",
+      }),
+    ])
   })
 
   it("createAttachmentHandlers ignores non-file paste events", () => {

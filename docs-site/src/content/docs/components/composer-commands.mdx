@@ -1,0 +1,102 @@
+---
+title: Composer Commands
+description: Use one command model for slash commands, mentions, agents, MCP tools, skills, and custom input intent.
+---
+
+Composer commands are structured input intent. They are not execution results, tool outputs, or automatic backend calls.
+
+## Rule
+
+Commands describe what the user selected before submit. Host code decides what to execute after submit.
+
+## Command Shape
+
+```ts
+type UiComposerCommand = {
+  id: string
+  kind: "slash" | "mention" | "agent" | "tool" | "skill" | "mcp" | "custom"
+  label: string
+  insertText: string
+  trigger?: "/" | "@"
+  description?: string
+  group?: string
+  disabledReason?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## Example
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  commands={[
+    {
+      id: "agent-research",
+      kind: "agent",
+      label: "Researcher",
+      insertText: "@researcher ",
+      trigger: "@",
+      description: "Route the next prompt to the research agent.",
+      metadata: { agentId: "researcher" },
+    },
+    {
+      id: "mcp-browser-search",
+      kind: "mcp",
+      label: "browser.search",
+      insertText: "/browser.search ",
+      trigger: "/",
+      description: "Ask the host to invoke an MCP browser search tool.",
+      metadata: { server: "browser", tool: "search" },
+    },
+    {
+      id: "skill-product-writing",
+      kind: "skill",
+      label: "Product writing",
+      insertText: "/product-writing ",
+      trigger: "/",
+    },
+  ]}
+  onSubmit={(value) => {
+    for (const command of value.commands) {
+      console.log(command.id, command.kind, command.metadata)
+    }
+  }}
+/>
+```
+
+## Submit Values
+
+Submit values include structured selected commands. Do not rely only on parsing final text.
+
+```ts
+type UiComposerCommandSelection = {
+  id: string
+  kind: "slash" | "mention" | "agent" | "tool" | "skill" | "mcp" | "custom"
+  label: string
+  insertText: string
+  trigger: "/" | "@"
+  range: { start: number; end: number }
+  description?: string
+  group?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## Disabled Commands
+
+Use `disabledReason` when the host knows a command cannot be selected.
+
+```ts
+const command = {
+  id: "mcp-browser-search",
+  kind: "mcp",
+  label: "browser.search",
+  insertText: "/browser.search ",
+  trigger: "/",
+  disabledReason: "Connect the browser MCP server first.",
+} satisfies UiComposerCommand
+```
+
+The command menu can show the reason, but Uinify still does not validate whether agents, skills, MCP servers, or tools exist.

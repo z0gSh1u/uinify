@@ -1,13 +1,18 @@
 import { useState } from "react"
 import { exampleTemplateSections, type ExampleTemplate } from "../fixtures"
 import { AdapterTemplate } from "../templates/adapter-template"
+import { AgentShowcaseTemplate } from "../templates/agent-showcase-template"
 import { ArtifactTemplate } from "../templates/artifact-template"
 import { MinimalAppTemplate } from "../templates/minimal-app"
+import { MultimodalTemplate } from "../templates/multimodal-template"
 import { UploadTemplate } from "../templates/upload-template"
 import artifactDocsHref from "../../docs-site/src/content/docs/advanced/artifact-renderers.mdx?url"
 import composerDocsHref from "../../docs-site/src/content/docs/components/composer-lexical.mdx?url"
+import agentStepsDocsHref from "../../docs-site/src/content/docs/integration/agent-steps.mdx?url"
 import coreConceptsDocsHref from "../../docs-site/src/content/docs/guides/core-concepts.mdx?url"
 import gettingStartedDocsHref from "../../docs-site/src/content/docs/getting-started.mdx?url"
+import layeredPublicApiDocsHref from "../../docs-site/src/content/docs/guides/layered-public-api.mdx?url"
+import multimodalImagesDocsHref from "../../docs-site/src/content/docs/integration/multimodal-images.mdx?url"
 import sseDocsHref from "../../docs-site/src/content/docs/integration/sse.mdx?url"
 import streamMappingDocsHref from "../../docs-site/src/content/docs/integration/stream-mapping.mdx?url"
 import themingDocsHref from "../../docs-site/src/content/docs/styling/theming.mdx?url"
@@ -16,7 +21,9 @@ import uploadLifecycleDocsHref from "../../docs-site/src/content/docs/integratio
 const templateRegistry = {
   minimal: MinimalAppTemplate,
   adapter: AdapterTemplate,
+  multimodal: MultimodalTemplate,
   upload: UploadTemplate,
+  "agent-showcase": AgentShowcaseTemplate,
   artifact: ArtifactTemplate,
 } satisfies Record<ExampleTemplate["id"], () => React.JSX.Element>
 
@@ -24,8 +31,11 @@ const templates = exampleTemplateSections.flatMap((section) => section.templates
 
 const docsHrefByPath = {
   "docs/getting-started.md": gettingStartedDocsHref,
+  "docs/components/composer-lexical.md": composerDocsHref,
   "docs/integration/stream-mapping.md": streamMappingDocsHref,
+  "docs/integration/multimodal-images.md": multimodalImagesDocsHref,
   "docs/integration/upload-lifecycle.md": uploadLifecycleDocsHref,
+  "docs/guides/layered-public-api.md": layeredPublicApiDocsHref,
   "docs/advanced/artifact-renderers.md": artifactDocsHref,
 } satisfies Record<ExampleTemplate["docsPath"], string>
 
@@ -43,6 +53,8 @@ const docsMap = [
   { label: "Stream Mapping", href: streamMappingDocsHref, description: "Normalize host protocols." },
   { label: "SSE", href: sseDocsHref, description: "Read server-sent events." },
   { label: "Composer", href: composerDocsHref, description: "Wire input and attachments." },
+  { label: "Layered API", href: layeredPublicApiDocsHref, description: "Choose the right public layer." },
+  { label: "Agent Steps", href: agentStepsDocsHref, description: "Render tools and work as steps." },
   { label: "Styling", href: themingDocsHref, description: "Theme with tokens and slots." },
 ]
 
@@ -117,7 +129,7 @@ export function ExamplePlayground() {
         <section className="playground-preview" role="region" aria-label="Selected template preview">
           <div className="playground-preview-header">
             <div>
-              <h2>{selectedTemplate.title}</h2>
+              <p className="playground-preview-title">{selectedTemplate.title}</p>
               <p>{selectedTemplate.description}</p>
             </div>
             <a href={selectedDocsHref}>Read docs</a>

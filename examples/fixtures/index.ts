@@ -11,14 +11,17 @@ export type ExampleFixture = {
 }
 
 export type ExampleTemplate = {
-  id: "minimal" | "adapter" | "upload" | "artifact"
+  id: "minimal" | "adapter" | "multimodal" | "upload" | "agent-showcase" | "artifact"
   category: ExampleFixture["category"]
   title: string
   description: string
   docsPath:
     | "docs/getting-started.md"
+    | "docs/components/composer-lexical.md"
     | "docs/integration/stream-mapping.md"
+    | "docs/integration/multimodal-images.md"
     | "docs/integration/upload-lifecycle.md"
+    | "docs/guides/layered-public-api.md"
     | "docs/advanced/artifact-renderers.md"
 }
 
@@ -171,11 +174,25 @@ export const exampleTemplates: ExampleTemplate[] = [
     docsPath: "docs/integration/stream-mapping.md",
   },
   {
+    id: "multimodal",
+    category: "integration",
+    title: "Multimodal image template",
+    description: "Image attachments become canonical transcript image parts under host control.",
+    docsPath: "docs/integration/multimodal-images.md",
+  },
+  {
     id: "upload",
     category: "integration",
     title: "Upload orchestration template",
     description: "Controlled attachments keep upload progression in host-owned state.",
     docsPath: "docs/integration/upload-lifecycle.md",
+  },
+  {
+    id: "agent-showcase",
+    category: "integration",
+    title: "Layered agent UI showcase",
+    description: "Commands, image input, and agent steps composed through public contracts.",
+    docsPath: "docs/guides/layered-public-api.md",
   },
   {
     id: "artifact",

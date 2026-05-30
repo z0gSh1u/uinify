@@ -92,3 +92,5 @@ out/
 .pnp.*
 
 dist-example
+
+docs-site/.astro

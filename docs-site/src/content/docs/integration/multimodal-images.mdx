@@ -1,0 +1,79 @@
+---
+title: Multimodal Images
+description: Map host-owned image uploads into canonical transcript image parts.
+---
+
+Images are transcript message parts. Uploads, validation, object URLs, remote URLs, cancellation, and cleanup remain host-owned.
+
+## Rule
+
+Use the composer to collect image attachments. Use host code to upload or create a local URL. Then dispatch `part.image.emitted` to render an image part in the transcript.
+
+## Composer Submit
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  onSubmit={(value) => {
+    const imageAttachment = value.attachments.find((attachment) => attachment.mimeType.startsWith("image/"))
+
+    if (!imageAttachment) {
+      return
+    }
+
+    const url = URL.createObjectURL(imageAttachment.file)
+    console.log(url, imageAttachment.name)
+  }}
+/>
+```
+
+## Transcript Image Event
+
+After the host owns a displayable URL, dispatch an image part.
+The event `partId` becomes the image part `id`; the runtime supplies `kind: "image"`.
+
+```ts
+runtime.dispatch({ type: "message.started", messageId: "user-1", role: "user" })
+runtime.dispatch({
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: {
+    url: "https://cdn.example.com/uploads/sketch.png",
+    alt: "Uploaded sketch",
+    mimeType: "image/png",
+    width: 640,
+    height: 480,
+    sourceAttachmentId: "attachment-1",
+  },
+})
+runtime.dispatch({ type: "message.completed", messageId: "user-1" })
+```
+
+## Boundaries
+
+Uinify does not upload files, store blobs, validate file policy, call a model, or revoke object URLs for the host.
+
+If host code uses `URL.createObjectURL`, do not revoke immediately after dispatch. Revoke when the rendered image is removed or the component unmounts.
+
+```ts
+const url = URL.createObjectURL(file)
+const activeObjectUrls = new Set<string>()
+activeObjectUrls.add(url)
+
+runtime.dispatch({
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: { url, alt: file.name, mimeType: file.type },
+})
+
+// Later, when the rendered image is removed or the component unmounts:
+for (const activeUrl of activeObjectUrls) {
+  URL.revokeObjectURL(activeUrl)
+}
+activeObjectUrls.clear()
+```
+
+Use attachment lifecycle state for selection, validation, upload progress, retry, and cancellation. Use image parts only for transcript rendering.

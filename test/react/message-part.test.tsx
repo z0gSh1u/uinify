@@ -1,18 +1,17 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { StrictMode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { UiArtifactPart, UiMessagePart } from "../model/types"
-import { createChatRuntime } from "../runtime/create-chat-runtime"
-import { AttachmentPart } from "./attachment-part"
-import { ChatRoot } from "./chat-root"
-import * as chatRootModule from "./chat-root"
-import { CurrentMessageProvider } from "./current-message"
-import * as currentMessageModule from "./current-message"
-import { MessagePart } from "./message-part"
-import { ReasoningBlock } from "./reasoning-block"
-import { RenderersProvider } from "./renderers"
-import { ToolCallBlock } from "./tool-call-block"
+import type { UiArtifactPart, UiMessagePart } from "../../src/model/types"
+import { createChatRuntime } from "../../src/runtime/create-chat-runtime"
+import { AttachmentPart } from "../../src/react/attachment-part"
+import { ChatRoot } from "../../src/react/chat-root"
+import * as chatRootModule from "../../src/react/chat-root"
+import { CurrentMessageProvider } from "../../src/react/current-message"
+import * as currentMessageModule from "../../src/react/current-message"
+import { MessagePart } from "../../src/react/message-part"
+import { ReasoningBlock } from "../../src/react/reasoning-block"
+import { RenderersProvider } from "../../src/react/renderers"
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -137,6 +136,113 @@ describe("MessagePart", () => {
     )
   })
 
+  it("renders tool steps through the default step block", () => {
+    render(
+      <MessagePart
+        part={{
+          id: "s1",
+          kind: "step",
+          category: "tool",
+          status: "running",
+          label: "Search docs",
+          inputSummary: "query: SSE support",
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Search docs")).toBeInTheDocument()
+    expect(screen.getByText("query: SSE support")).toBeInTheDocument()
+    expect(screen.getByText("tool")).toBeInTheDocument()
+    expect(screen.getByText("running")).toBeInTheDocument()
+  })
+
+  it("uses renderStep overrides", () => {
+    const runtime = createChatRuntime()
+
+    render(
+      <ChatRoot runtime={runtime} renderers={{ renderStep: ({ part }) => <div>custom {part.label}</div> }}>
+        <MessagePart part={{ id: "s1", kind: "step", category: "planner", status: "complete", label: "Plan" }} />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("custom Plan")).toBeInTheDocument()
+  })
+
+  it("uses renderImage overrides", () => {
+    const runtime = createChatRuntime()
+
+    render(
+      <ChatRoot runtime={runtime} renderers={{ renderImage: ({ part }) => <div>custom image {part.alt}</div> }}>
+        <MessagePart
+          part={{
+            id: "img1",
+            kind: "image",
+            url: "https://example.com/diagram.png",
+            alt: "Diagram",
+            mimeType: "image/png",
+            width: 640,
+            height: 480,
+            sourceAttachmentId: "attachment-1",
+          }}
+        />
+      </ChatRoot>,
+    )
+
+    expect(screen.getByText("custom image Diagram")).toBeInTheDocument()
+  })
+
+  it("renders default image metadata and local fallback when an image fails to load", () => {
+    render(
+      <MessagePart
+        part={{
+          id: "img1",
+          kind: "image",
+          url: "https://example.com/missing.png",
+          alt: "Missing diagram",
+          mimeType: "image/png",
+          width: 640,
+          height: 480,
+          sourceAttachmentId: "attachment-1",
+        }}
+      />,
+    )
+
+    const image = screen.getByRole("img", { name: "Missing diagram" })
+    expect(image).toHaveAttribute("src", "https://example.com/missing.png")
+    expect(image).toHaveAttribute("width", "640")
+    expect(image).toHaveAttribute("height", "480")
+    expect(image.closest('[data-slot="image"]')).toHaveAttribute("data-mime-type", "image/png")
+    expect(image.closest('[data-slot="image"]')).toHaveAttribute("data-source-attachment-id", "attachment-1")
+
+    fireEvent.error(image)
+
+    expect(screen.getByText(/Image failed to load/)).toBeInTheDocument()
+  })
+
+  it("renders failed image fallback and alt context as a single figure caption", () => {
+    const { container } = render(
+      <MessagePart
+        part={{
+          id: "img1",
+          kind: "image",
+          url: "https://example.com/missing.png",
+          alt: "Missing diagram",
+        }}
+      />,
+    )
+
+    fireEvent.error(screen.getByRole("img", { name: "Missing diagram" }))
+
+    expect(container.querySelectorAll("figcaption")).toHaveLength(1)
+    expect(screen.getByText("Image failed to load: Missing diagram")).toBeInTheDocument()
+  })
+
+  it("does not render legacy tool-call parts", () => {
+    render(<MessagePart part={{ id: "legacy-tool", kind: "tool-call" } as never} />)
+
+    expect(screen.queryByText("legacy-tool")).not.toBeInTheDocument()
+  })
+
   it("renders attachment parts through a stable attachment slot", () => {
     render(
       <MessagePart
@@ -202,67 +308,6 @@ describe("MessagePart", () => {
     expect(useChatActionHandlersSpy).not.toHaveBeenCalled()
   })
 
-  it("shows tool call name and summaries", () => {
-    render(
-      <MessagePart
-        part={{
-          id: "tool-1",
-          kind: "tool-call",
-          toolName: "searchCode",
-          status: "complete",
-          inputSummary: "Search src/react",
-          outputSummary: "Found 4 matches",
-        }}
-      />,
-    )
-
-    expect(screen.getByText("searchCode")).toBeInTheDocument()
-    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
-    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
-  })
-
-  it("toggles tool details without consulting chat action hooks", async () => {
-    const user = userEvent.setup()
-    const onToggleDetails = vi.fn()
-    const useCurrentMessageSpy = vi.spyOn(currentMessageModule, "useCurrentMessage")
-    const useChatActionHandlersSpy = vi.spyOn(chatRootModule, "useChatActionHandlers")
-
-    render(
-      <StrictMode>
-        <ToolCallBlock
-          onToggleDetails={onToggleDetails}
-          part={{
-            id: "tool-1",
-            kind: "tool-call",
-            toolName: "searchCode",
-            status: "complete",
-            inputSummary: "Search src/react",
-            outputSummary: "Found 4 matches",
-          }}
-        />
-      </StrictMode>,
-    )
-
-    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
-    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "Show tool details" }))
-
-    expect(screen.getByText("Search src/react")).toBeInTheDocument()
-    expect(screen.getByText("Found 4 matches")).toBeInTheDocument()
-    expect(onToggleDetails).toHaveBeenNthCalledWith(1, true)
-    expect(onToggleDetails).toHaveBeenCalledTimes(1)
-
-    await user.click(screen.getByRole("button", { name: "Hide tool details" }))
-    expect(screen.queryByText("Search src/react")).not.toBeInTheDocument()
-    expect(screen.queryByText("Found 4 matches")).not.toBeInTheDocument()
-    expect(onToggleDetails).toHaveBeenNthCalledWith(2, false)
-    expect(onToggleDetails).toHaveBeenCalledTimes(2)
-
-    expect(useCurrentMessageSpy).not.toHaveBeenCalled()
-    expect(useChatActionHandlersSpy).not.toHaveBeenCalled()
-  })
-
   it("reports reasoning surface toggles through the surrounding action layer", async () => {
     const user = userEvent.setup()
     const onPartAction = vi.fn()
@@ -304,53 +349,6 @@ describe("MessagePart", () => {
       messageId: "m1",
       partId: "reasoning-1",
       partKind: "reasoning",
-    })
-    expect(onPartAction).toHaveBeenCalledTimes(2)
-  })
-
-  it("reports tool detail surface toggles through the surrounding action layer", async () => {
-    const user = userEvent.setup()
-    const onPartAction = vi.fn()
-    const runtime = createChatRuntime({ conversationId: "demo" })
-    const message = {
-      id: "m1",
-      role: "assistant" as const,
-      state: "complete" as const,
-      feedback: "none" as const,
-      parts: [],
-    }
-
-    render(
-      <ChatRoot runtime={runtime} onPartAction={onPartAction}>
-        <CurrentMessageProvider message={message}>
-          <MessagePart
-            part={{
-              id: "tool-1",
-              kind: "tool-call",
-              toolName: "searchCode",
-              status: "complete",
-              inputSummary: "Search src/react",
-              outputSummary: "Found 4 matches",
-            }}
-          />
-        </CurrentMessageProvider>
-      </ChatRoot>,
-    )
-
-    await user.click(screen.getByRole("button", { name: "Show tool details" }))
-    await user.click(screen.getByRole("button", { name: "Hide tool details" }))
-
-    expect(onPartAction).toHaveBeenNthCalledWith(1, {
-      action: "toggle-tool-details",
-      messageId: "m1",
-      partId: "tool-1",
-      partKind: "tool-call",
-    })
-    expect(onPartAction).toHaveBeenNthCalledWith(2, {
-      action: "toggle-tool-details",
-      messageId: "m1",
-      partId: "tool-1",
-      partKind: "tool-call",
     })
     expect(onPartAction).toHaveBeenCalledTimes(2)
   })
@@ -696,9 +694,8 @@ describe("MessagePart", () => {
     expect(screen.getByText("[structured artifact view unavailable]")).toBeInTheDocument()
   })
 
-  it("uses renderer overrides for reasoning, tool calls, and artifact registries", () => {
+  it("uses renderer overrides for reasoning and artifact registries", () => {
     const renderReasoning = vi.fn(() => <div>Custom reasoning</div>)
-    const renderToolCall = vi.fn(() => <div>Custom tool call</div>)
     const renderCodeArtifact = vi.fn(() => <div>Custom artifact</div>)
 
     const artifactPart: UiArtifactPart = {
@@ -726,14 +723,6 @@ describe("MessagePart", () => {
         text: "Internal chain",
         state: "streaming",
       },
-      {
-        id: "tool-2",
-        kind: "tool-call",
-        toolName: "lookupDocs",
-        status: "running",
-        inputSummary: null,
-        outputSummary: null,
-      },
       artifactPart,
       {
         id: "artifact-3",
@@ -757,7 +746,6 @@ describe("MessagePart", () => {
       <RenderersProvider
         value={{
           renderReasoning,
-          renderToolCall,
           artifactRegistry: {
             code: renderCodeArtifact,
           },
@@ -770,11 +758,9 @@ describe("MessagePart", () => {
     )
 
     expect(screen.getByText("Custom reasoning")).toBeInTheDocument()
-    expect(screen.getByText("Custom tool call")).toBeInTheDocument()
     expect(screen.getByText("Custom artifact")).toBeInTheDocument()
     expect(screen.getByText("Plain text artifact")).toBeInTheDocument()
     expect(renderReasoning).toHaveBeenCalledTimes(1)
-    expect(renderToolCall).toHaveBeenCalledTimes(1)
     expect(renderCodeArtifact).toHaveBeenCalledTimes(1)
     expect(renderCodeArtifact).toHaveBeenCalledWith({
       artifact: artifactPart.artifact,
@@ -788,7 +774,6 @@ describe("MessagePart", () => {
       <RenderersProvider
         value={{
           renderReasoning: () => <div>Custom reasoning</div>,
-          renderToolCall: () => <div>Custom tool call</div>,
           artifactRegistry: {
             code: () => <div>Custom artifact</div>,
           },
@@ -801,16 +786,6 @@ describe("MessagePart", () => {
               kind: "reasoning",
               text: "Internal chain",
               state: "streaming",
-            }}
-          />
-          <MessagePart
-            part={{
-              id: "tool-override",
-              kind: "tool-call",
-              toolName: "lookupDocs",
-              status: "running",
-              inputSummary: null,
-              outputSummary: null,
             }}
           />
           <MessagePart
@@ -837,7 +812,6 @@ describe("MessagePart", () => {
     )
 
     expect(screen.getByText("Custom reasoning").closest('[data-slot="reasoning"]')).toBeTruthy()
-    expect(screen.getByText("Custom tool call").closest('[data-slot="toolcall"]')).toBeTruthy()
     expect(screen.getByText("Custom artifact").closest('[data-slot="artifact-code"]')).toBeTruthy()
   })
 })

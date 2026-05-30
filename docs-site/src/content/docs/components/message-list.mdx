@@ -20,7 +20,7 @@ import { ChatRoot, MessageList } from "uinify/react"
 ## What You Get
 
 - transcript rendering for assistant and user messages
-- built-in rendering for text, reasoning, tool-call, artifact, image, and attachment parts
+- built-in rendering for text, reasoning, agent/tool execution as `step` transcript output, artifact, image, and attachment parts
 - action surfaces when the matching handlers are provided through `ChatRoot`
 
 ## When To Customize
@@ -29,6 +29,6 @@ Start with styling and renderer overrides before replacing the transcript shell.
 
 - Use [Theming](/styling/theming/) for tokens such as colors and spacing.
 - Use [Stable Slots](/styling/slots/) for durable selectors and `slotClassNames` keys.
-- Use the artifact and renderer docs when a specific part type needs a custom presentation.
+- Use `renderStep`, image renderers, artifact renderers, and the component docs when a specific transcript output needs a custom presentation.
 
 If you are adopting `uinify` for the first time, keep `MessageList` and move your integration effort into event mapping and host callbacks.

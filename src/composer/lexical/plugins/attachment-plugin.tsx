@@ -7,14 +7,42 @@ import type {
 let attachmentIdCounter = 0
 
 export function collectAttachments(files: FileList | File[]) {
-  return Array.from(files).map<UiComposerAttachment>((file, index) => ({
-    id: `${Date.now()}-${attachmentIdCounter++}-${index}-${file.name}`,
-    file,
-    name: file.name,
-    mimeType: file.type,
-    size: file.size,
-    status: "queued",
-  }))
+  return Array.from(files).map<UiComposerAttachment>((file, index) => {
+    const name = readAttachmentName(file)
+
+    return {
+      id: `${Date.now()}-${attachmentIdCounter++}-${index}-${name}`,
+      file,
+      name,
+      mimeType: file.type,
+      size: file.size,
+      status: "queued",
+    }
+  })
+}
+
+function readAttachmentName(file: File) {
+  if (file.name) {
+    return file.name
+  }
+
+  const extension = readFallbackExtension(file.type)
+
+  if (!file.type.startsWith("image/")) {
+    return extension ? `pasted-file.${extension}` : "pasted-file"
+  }
+
+  return `pasted-image.${extension ?? "image"}`
+}
+
+function readFallbackExtension(mimeType: string) {
+  const subtype = mimeType.split("/")[1]?.split(";")[0]
+
+  if (!subtype) {
+    return undefined
+  }
+
+  return subtype === "plain" ? "txt" : subtype
 }
 
 export function createAttachmentHandlers(

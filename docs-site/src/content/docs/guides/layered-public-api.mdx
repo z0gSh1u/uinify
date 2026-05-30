@@ -1,0 +1,96 @@
+---
+title: Layered Public API
+description: Choose the core, transcript, composer, adapter, or theme layer for a v0.4 integration.
+---
+
+Uinify v0.4 is a layered agent UI kit. Start with the layer that matches the work you are doing, then compose additional layers only when the product needs them.
+
+## Rule
+
+Choose the smallest public layer that solves the integration need: core for state, transcript for rendering, composer for input, adapter for mapping, and theme for visual customization.
+
+## Core Layer
+
+Use the `uinify` package root when you need canonical UI state and events.
+
+Stable core APIs include `createChatRuntime`, `UiRuntimeState`, `UiMessage`, `UiMessagePart`, `UiStreamEvent`, `UiComposerCommand`, and adapter helpers such as `createAdapterRunner`.
+
+Use core when you already have host events and need a normalized transcript model.
+
+```ts
+import { createChatRuntime, type UiStreamEvent } from "uinify"
+
+const runtime = createChatRuntime({ conversationId: "layered-demo" })
+const events: UiStreamEvent[] = [
+  { type: "message.started", messageId: "m1", role: "assistant" },
+  { type: "part.text.delta", messageId: "m1", partId: "text-1", delta: "Core owns state and events." },
+  { type: "message.completed", messageId: "m1" },
+]
+
+for (const event of events) {
+  runtime.dispatch(event)
+}
+```
+
+## Transcript Layer
+
+Use `uinify/react` when you want default rendering or renderer override seams. `ChatRoot`, `MessageList`, `Message`, `MessagePart`, `StepBlock`, `ImagePart`, `ReasoningBlock`, and `ArtifactContainer` live here.
+
+Use transcript overrides such as `renderStep`, `renderImage`, and artifact registry hooks before replacing the whole message list.
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot runtime={runtime} renderers={{ renderStep: ({ part }) => <strong>{part.label}</strong> }}>
+  <MessageList />
+</ChatRoot>
+```
+
+## Composer Layer
+
+Use `uinify/composer/lexical` when the product needs text input, attachments, and command selection.
+
+Commands are input intent. They are not tool results and they are not executed by Uinify.
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  commands={[
+    { id: "agent-research", kind: "agent", label: "Researcher", insertText: "@researcher ", trigger: "@" },
+    { id: "mcp-browser-search", kind: "mcp", label: "browser.search", insertText: "/browser.search ", trigger: "/" },
+  ]}
+  onSubmit={(value) => {
+    console.log(value.commands)
+  }}
+/>
+```
+
+## Adapter Layer
+
+Use adapter helpers when a host protocol needs to be converted into canonical `UiStreamEvent[]`.
+
+Adapters stop at UI events plus diagnostics. They do not become vendor SDKs, model clients, or workflow engines.
+
+```ts
+import { createAdapterRunner, type UiStreamEvent } from "uinify"
+
+const adaptHostEvent = createAdapterRunner((event: { id: string; text: string }): UiStreamEvent[] => [
+  { type: "message.started", messageId: event.id, role: "assistant" },
+  { type: "part.text.delta", messageId: event.id, partId: `${event.id}-text`, delta: event.text },
+  { type: "message.completed", messageId: event.id },
+])
+```
+
+## Theme Layer
+
+Use `uinify/styles.css`, CSS tokens, stable `data-slot` regions, and `slotClassNames` when the default structure is right but the visual language needs to change.
+
+Prefer this order: tokens, stable slots, `slotClassNames`, renderer overrides, and only then replacing large transcript components.
+
+## Related Guides
+
+- [Agent Steps](/integration/agent-steps/) explains the step event model.
+- [StepBlock](/components/step-block/) explains default step rendering and `renderStep`.
+- [Composer Commands](/components/composer-commands/) explains command input intent.
+- [Multimodal Images](/integration/multimodal-images/) explains host-owned image upload and transcript image parts.

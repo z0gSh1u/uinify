@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readSSEStream } from "./read-sse-stream"
+import { readSSEStream } from "../../src/sse/read-sse-stream"
 
 describe("readSSEStream", () => {
   it("parses event and data fields from a ReadableStream", async () => {

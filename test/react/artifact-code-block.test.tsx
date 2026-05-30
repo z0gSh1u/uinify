@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import { renderDefaultArtifactBody } from "./artifact-body"
-import { ArtifactCodeBlock } from "./artifact-code-block"
+import { renderDefaultArtifactBody } from "../../src/react/artifact-body"
+import { ArtifactCodeBlock } from "../../src/react/artifact-code-block"
 
 describe("ArtifactCodeBlock", () => {
   it("selects the view identified by defaultViewId", () => {

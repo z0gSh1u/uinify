@@ -17,14 +17,14 @@ import {
 } from "lexical"
 import type {
   UiComposerAttachment,
-  UiComposerChoice,
+  UiComposerCommand,
+  UiComposerCommandSelection,
   UiComposerAttachmentValidationResult,
   UiComposerValue,
 } from "../contracts"
 import { AttachmentTray } from "../../react/attachment-tray"
 import { createAttachmentHandlers } from "./plugins/attachment-plugin"
-import { MentionPlugin } from "./plugins/mention-plugin"
-import { SlashCommandPlugin } from "./plugins/slash-command-plugin"
+import { CommandPlugin, readCommandTrigger } from "./plugins/command-plugin"
 
 type ActiveTokenRange = {
   start: number
@@ -45,8 +45,7 @@ export type LexicalComposerProps = {
   onAttachmentValidation?: (attachments: UiComposerAttachment[]) => UiComposerAttachmentValidationResult[]
   onAttachmentCancel?: (attachment: UiComposerAttachment) => void
   sendPolicy?: "allow-pending" | "uploaded-only"
-  slashCommands?: UiComposerChoice[]
-  mentions?: UiComposerChoice[]
+  commands?: UiComposerCommand[]
 }
 
 export function LexicalComposer({
@@ -58,14 +57,15 @@ export function LexicalComposer({
   onAttachmentValidation,
   onAttachmentCancel,
   sendPolicy = "allow-pending",
-  slashCommands = [],
-  mentions = [],
+  commands = [],
 }: LexicalComposerProps) {
   const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
+  const lastTextRef = useRef("")
   const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
   const [uncontrolledAttachments, setUncontrolledAttachments] = useState(initialAttachments)
   const [activeToken, setActiveToken] = useState("")
+  const [selectedCommands, setSelectedCommands] = useState<UiComposerCommandSelection[]>([])
   const attachments = controlledAttachments ?? uncontrolledAttachments
   const setComposerAttachments = (
     nextAttachments:
@@ -90,6 +90,16 @@ export function LexicalComposer({
   }
   const updateAttachments = (updater: (current: UiComposerAttachment[]) => UiComposerAttachment[]) => {
     setComposerAttachments(updater)
+  }
+  const updateTextFromEditor = (nextText: string) => {
+    const previousText = lastTextRef.current
+
+    lastTextRef.current = nextText
+    setText(nextText)
+
+    if (previousText !== nextText) {
+      setSelectedCommands((current) => reconcileCommandSelections(current, previousText, nextText))
+    }
   }
   const attachmentHandlers = useMemo(
     () =>
@@ -190,6 +200,7 @@ export function LexicalComposer({
   }
 
   const setEditorText = (nextText: string) => {
+    lastTextRef.current = nextText
     setText(nextText)
     editorRef.current?.update(() => {
       const root = $getRoot()
@@ -203,19 +214,53 @@ export function LexicalComposer({
     })
   }
 
-  const insertChoice = (choice: UiComposerChoice) => {
-    const nextText = updateEditorToken(choice.insertText)
-
-    if (nextText !== null) {
-      setText(nextText)
+  const insertCommand = (command: UiComposerCommand) => {
+    if (command.disabledReason) {
       return
     }
 
-    setEditorText(replaceActiveToken(choice.insertText))
+    const state = getActiveTokenState()
+    const range = state.range ?? lastActiveTokenStateRef.current.range
+    const trigger = readCommandTrigger(command)
+
+    if (!range || !trigger) {
+      return
+    }
+
+    const previousText = readEditorText(editorRef.current) ?? text
+    const replacementRange = readEffectiveReplacementRange(previousText, range, command.insertText)
+    const nextText = updateEditorToken(command.insertText)
+    const resolvedNextText = nextText ?? replaceTokenInSnapshotAtRange(previousText, range, command.insertText)
+    const delta = resolvedNextText.length - previousText.length
+
+    lastTextRef.current = resolvedNextText
+
+    if (nextText !== null) {
+      setText(nextText)
+    } else {
+      setEditorText(resolvedNextText)
+    }
+
+    setSelectedCommands((current) => [
+      ...current.flatMap((selection) => {
+        if (selection.range.end <= replacementRange.start) {
+          return [selection]
+        }
+
+        if (selection.range.start >= replacementRange.end) {
+          return [shiftCommandSelection(selection, delta)]
+        }
+
+        return []
+      }),
+      createCommandSelection(command, trigger, replacementRange.start),
+    ])
   }
 
   const resetComposer = () => {
+    lastTextRef.current = ""
     setText("")
+    setSelectedCommands([])
     setComposerAttachments([])
     editorRef.current?.update(() => {
       const root = $getRoot()
@@ -253,7 +298,7 @@ export function LexicalComposer({
               ariaLabel="Message"
               data-slot="composer-editor"
               onInput={(event) => {
-                setText(event.currentTarget.textContent ?? "")
+                updateTextFromEditor(event.currentTarget.textContent ?? "")
               }}
               onDrop={attachmentHandlers.onDrop}
               onPaste={attachmentHandlers.onPaste}
@@ -266,7 +311,7 @@ export function LexicalComposer({
         <OnChangePlugin
           onChange={(editorState) => {
             editorState.read(() => {
-              setText($getRoot().getTextContent())
+              updateTextFromEditor($getRoot().getTextContent())
             })
           }}
         />
@@ -281,8 +326,7 @@ export function LexicalComposer({
         />
       </BaseComposer>
 
-      <SlashCommandPlugin items={slashCommands} onSelect={insertChoice} query={activeToken} />
-      <MentionPlugin items={mentions} onSelect={insertChoice} query={activeToken} />
+      <CommandPlugin commands={commands} onSelect={insertCommand} query={activeToken} />
 
       <AttachmentTray
         attachments={attachments}
@@ -307,17 +351,14 @@ export function LexicalComposer({
             return
           }
 
-          const { commands: submitCommands, mentions: submitMentions } = deriveSubmitMetadata(
-            text,
-            slashCommands,
-            mentions,
+          const submitCommands = selectedCommands.filter(
+            (selection) => text.slice(selection.range.start, selection.range.end) === selection.insertText,
           )
 
           onSubmit({
             text,
             attachments: submittableAttachments,
             commands: submitCommands,
-            mentions: submitMentions,
           })
           resetComposer()
         }}
@@ -417,6 +458,16 @@ function readActiveTokenState(editor: LexicalEditor | null): ActiveTokenState {
   return { token, range }
 }
 
+function readEditorText(editor: LexicalEditor | null) {
+  let text: string | null = null
+
+  editor?.getEditorState().read(() => {
+    text = $getRoot().getTextContent()
+  })
+
+  return text
+}
+
 function replaceTokenInSnapshot(text: string, token: string, insertText: string) {
   return replaceTokenInSnapshotAtRange(text, findFallbackRange(text, token), insertText)
 }
@@ -454,33 +505,109 @@ function findFallbackRange(text: string, token: string): ActiveTokenRange | null
   }
 }
 
-function deriveSubmitMetadata(text: string, slashCommands: UiComposerChoice[], mentions: UiComposerChoice[]) {
+function createCommandSelection(
+  command: UiComposerCommand,
+  trigger: "/" | "@",
+  start: number,
+): UiComposerCommandSelection {
   return {
-    commands: deriveChoiceIdsFromText(text, slashCommands),
-    mentions: deriveChoiceIdsFromText(text, mentions),
+    id: command.id,
+    kind: command.kind,
+    label: command.label,
+    insertText: command.insertText,
+    trigger,
+    range: {
+      start,
+      end: start + command.insertText.length,
+    },
+    ...(command.description ? { description: command.description } : {}),
+    ...(command.group ? { group: command.group } : {}),
+    ...(command.metadata ? { metadata: command.metadata } : {}),
   }
 }
 
-function deriveChoiceIdsFromText(text: string, items: UiComposerChoice[]) {
-  const choicesByToken = new Map<string, string[]>()
+function readEffectiveReplacementRange(
+  text: string,
+  range: ActiveTokenRange,
+  insertText: string,
+): ActiveTokenRange {
+  const consumesFollowingWhitespace = insertText.endsWith(" ") && /^\s/.test(text.slice(range.end))
 
-  for (const item of items) {
-    const token = readChoiceToken(item)
+  return {
+    start: range.start,
+    end: consumesFollowingWhitespace ? range.end + 1 : range.end,
+  }
+}
 
-    if (!token) {
-      continue
+function shiftCommandSelection(
+  selection: UiComposerCommandSelection,
+  delta: number,
+): UiComposerCommandSelection {
+  return {
+    ...selection,
+    range: {
+      start: selection.range.start + delta,
+      end: selection.range.end + delta,
+    },
+  }
+}
+
+function reconcileCommandSelections(
+  selections: UiComposerCommandSelection[],
+  previousText: string,
+  nextText: string,
+) {
+  const change = readTextChange(previousText, nextText)
+
+  return selections.flatMap((selection) => {
+    if (previousText.slice(selection.range.start, selection.range.end) !== selection.insertText) {
+      return []
     }
 
-    choicesByToken.set(token, [...(choicesByToken.get(token) ?? []), item.id])
-  }
+    if (!change || change.start >= selection.range.end) {
+      return [selection]
+    }
 
-  if (choicesByToken.size === 0) {
+    if (change.end <= selection.range.start) {
+      return [shiftCommandSelection(selection, change.delta)]
+    }
+
     return []
+  })
+}
+
+function readTextChange(previousText: string, nextText: string) {
+  if (previousText === nextText) {
+    return null
   }
 
-  const matches = text.match(/(?:^|\s)([\/@]\S*)/g) ?? []
+  let start = 0
 
-  return matches.flatMap((match) => choicesByToken.get(match.trim()) ?? [])
+  while (
+    start < previousText.length &&
+    start < nextText.length &&
+    previousText[start] === nextText[start]
+  ) {
+    start += 1
+  }
+
+  let previousEnd = previousText.length
+  let nextEnd = nextText.length
+
+  while (
+    previousEnd > start &&
+    nextEnd > start &&
+    previousText[previousEnd - 1] === nextText[nextEnd - 1]
+  ) {
+    previousEnd -= 1
+    nextEnd -= 1
+  }
+
+  return {
+    start,
+    end: previousEnd,
+    delta: nextText.length - previousText.length,
+  }
 }
 
 function readSubmitBlockedReason(
@@ -500,10 +627,6 @@ function readSubmitBlockedReason(
   }
 
   return null
-}
-
-function readChoiceToken(choice: UiComposerChoice) {
-  return choice.insertText.trim().match(/^[\/@]\S*/)?.[0] ?? null
 }
 
 function EditorRefPlugin({ onReady }: { onReady: (editor: LexicalEditor) => void }) {

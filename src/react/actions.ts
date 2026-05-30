@@ -2,11 +2,7 @@ import type { UiArtifactPart, UiMessage, UiMessagePart } from "../model/types"
 
 export type UiMessageActionId = "copy" | "retry" | "regenerate"
 
-export type UiPartActionId =
-  | "copy"
-  | "toggle-reasoning"
-  | "toggle-tool-details"
-  | "open-artifact-view"
+export type UiPartActionId = "copy" | "toggle-reasoning" | "open-artifact-view"
 
 export type UiMessageActionDescriptor = {
   id: UiMessageActionId
@@ -51,11 +47,6 @@ export function getAvailablePartActions(part: UiMessagePart): UiPartActionDescri
     case "reasoning":
       return [
         createPartAction("toggle-reasoning", "Reasoning"),
-        createPartAction("copy", "Copy"),
-      ]
-    case "tool-call":
-      return [
-        createPartAction("toggle-tool-details", "Tool details"),
         createPartAction("copy", "Copy"),
       ]
     case "artifact":

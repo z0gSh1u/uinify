@@ -9,7 +9,7 @@ import { PartActions } from "./part-actions"
 import { ReasoningBlock } from "./reasoning-block"
 import { useChatActionHandlers } from "./chat-root"
 import { useRenderers } from "./renderers"
-import { ToolCallBlock } from "./tool-call-block"
+import { StepBlock } from "./step-block"
 
 export type MessagePartProps = {
   part: UiMessagePart
@@ -39,7 +39,18 @@ export function MessagePart({ part }: MessagePartProps) {
     case "image":
       return (
         <div data-kind="image" data-slot="message-part" data-state="complete" data-type="image">
-          <ImagePart part={part} />
+          {renderers.renderImage ? (
+            <figure
+              data-mime-type={part.mimeType}
+              data-slot="image"
+              data-source-attachment-id={part.sourceAttachmentId}
+              data-state="custom"
+            >
+              {renderers.renderImage({ part })}
+            </figure>
+          ) : (
+            <ImagePart part={part} />
+          )}
           {renderActions()}
         </div>
       )
@@ -68,28 +79,16 @@ export function MessagePart({ part }: MessagePartProps) {
           {renderActions()}
         </div>
       )
-    case "tool-call":
+    case "step":
       return (
-        <div data-kind="tool-call" data-slot="message-part" data-state={part.status} data-type="tool-call">
-          <div data-slot="toolcall" data-state={part.status}>
-            {renderers.renderToolCall ? (
-              <>{renderers.renderToolCall({ part })}</>
-            ) : (
-              <ToolCallBlock
-                onToggleDetails={() => {
-                  if (message) {
-                    onPartAction?.({
-                      action: "toggle-tool-details",
-                      messageId: message.id,
-                      partId: part.id,
-                      partKind: part.kind,
-                    })
-                  }
-                }}
-                part={part}
-              />
-            )}
-          </div>
+        <div data-kind="step" data-slot="message-part" data-state={part.status} data-type="step">
+          {renderers.renderStep ? (
+            <section data-category={part.category} data-slot="step" data-state={part.status}>
+              {renderers.renderStep({ part })}
+            </section>
+          ) : (
+            <StepBlock part={part} />
+          )}
           {renderActions()}
         </div>
       )
@@ -113,9 +112,7 @@ export function MessagePart({ part }: MessagePartProps) {
           {renderActions()}
         </div>
       )
-    default: {
-      const exhaustiveCheck: never = part
-      return exhaustiveCheck
-    }
+    default:
+      return null
   }
 }

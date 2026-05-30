@@ -44,6 +44,7 @@ export { Message, type MessageProps } from "./message"
 export { MessageList, type MessageListProps } from "./message-list"
 export { MessagePart, type MessagePartProps } from "./message-part"
 export { PartActions, type PartActionsProps } from "./part-actions"
+export { StepBlock, type StepBlockProps } from "./step-block"
 export {
   ReasoningBlock,
   type ReasoningBlockProps,
@@ -51,9 +52,9 @@ export {
 export {
   RenderersProvider,
   type ArtifactRendererProps,
+  type ImageRendererProps,
   type MessageRendererOverrides,
   type ReasoningRendererProps,
-  type ToolCallRendererProps,
+  type StepRendererProps,
   useRenderers,
 } from "./renderers"
-export { ToolCallBlock, type ToolCallBlockProps } from "./tool-call-block"

@@ -1,12 +1,16 @@
 import { createContext, useContext, type PropsWithChildren, type ReactNode } from "react"
-import type { UiArtifact, UiArtifactPart, UiArtifactView, UiReasoningPart, UiToolCallPart } from "../model/types"
+import type { UiArtifact, UiArtifactPart, UiArtifactView, UiImagePart, UiReasoningPart, UiStepPart } from "../model/types"
 
 export type ReasoningRendererProps = {
   part: UiReasoningPart
 }
 
-export type ToolCallRendererProps = {
-  part: UiToolCallPart
+export type StepRendererProps = {
+  part: UiStepPart
+}
+
+export type ImageRendererProps = {
+  part: UiImagePart
 }
 
 export type ArtifactRendererProps = {
@@ -17,7 +21,8 @@ export type ArtifactRendererProps = {
 
 export type MessageRendererOverrides = {
   renderReasoning?: (props: ReasoningRendererProps) => ReactNode
-  renderToolCall?: (props: ToolCallRendererProps) => ReactNode
+  renderStep?: (props: StepRendererProps) => ReactNode
+  renderImage?: (props: ImageRendererProps) => ReactNode
   artifactRegistry?: Record<string, (props: ArtifactRendererProps) => ReactNode>
   renderArtifactFallback?: (props: ArtifactRendererProps) => ReactNode
 }

@@ -17,6 +17,8 @@ export type SlotClassNames = Partial<{
   attachmentTray: string
   artifactContainer: string
   artifactTabs: string
+  step: string
+  image: string
 }>
 
 const stableSlotSelectors: Record<keyof SlotClassNames, string> = {
@@ -28,6 +30,8 @@ const stableSlotSelectors: Record<keyof SlotClassNames, string> = {
   attachmentTray: "attachment-tray",
   artifactContainer: "artifact-container",
   artifactTabs: "artifact-tabs",
+  step: "step",
+  image: "image",
 }
 
 function splitClassNames(value: string | undefined) {

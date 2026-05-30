@@ -14,8 +14,6 @@ export type PartActionsProps = {
 
 function getPartLabel(part: UiMessagePart) {
   switch (part.kind) {
-    case "tool-call":
-      return "Tool call"
     case "artifact":
       return "Artifact"
     default:

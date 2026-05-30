@@ -1,4 +1,4 @@
-import type { UiArtifact, UiAttachment, UiMessageRole, UiToolCallPart } from "../model/types"
+import type { UiArtifact, UiAttachment, UiImagePart, UiMessageRole, UiStepCategory, UiStepPart } from "../model/types"
 
 export type UiStreamEvent =
   | {
@@ -28,13 +28,61 @@ export type UiStreamEvent =
       delta: string
     }
   | {
-      type: "part.tool.updated"
+      type: "part.step.started"
       messageId: string
       partId: string
-      toolName: string
-      status: UiToolCallPart["status"]
+      category: UiStepCategory
+      label: string
+      summary?: string
+      inputSummary?: string
+      startedAt?: string
+      metadata?: Record<string, unknown>
+    }
+  | {
+      type: "part.step.updated"
+      messageId: string
+      partId: string
+      category?: UiStepCategory
+      status?: UiStepPart["status"]
+      label?: string
+      summary?: string
       inputSummary?: string
       outputSummary?: string
+      error?: string
+      startedAt?: string
+      completedAt?: string
+      metadata?: Record<string, unknown>
+    }
+  | {
+      type: "part.step.completed"
+      messageId: string
+      partId: string
+      category?: UiStepCategory
+      label?: string
+      summary?: string
+      inputSummary?: string
+      outputSummary?: string
+      completedAt?: string
+      metadata?: Record<string, unknown>
+    }
+  | {
+      type: "part.step.failed"
+      messageId: string
+      partId: string
+      category?: UiStepCategory
+      label?: string
+      summary?: string
+      inputSummary?: string
+      outputSummary?: string
+      error: string
+      completedAt?: string
+      metadata?: Record<string, unknown>
+    }
+  | {
+      type: "part.image.emitted"
+      messageId: string
+      partId: string
+      image: Omit<UiImagePart, "id" | "kind">
     }
   | {
       type: "part.artifact.emitted"

@@ -56,6 +56,14 @@ describe("ExamplePlayground", () => {
       "href",
       expect.stringContaining("composer-lexical"),
     )
+    expect(within(docsMap).getByRole("link", { name: "Layered API" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("layered-public-api"),
+    )
+    expect(within(docsMap).getByRole("link", { name: "Agent Steps" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("agent-steps"),
+    )
     expect(within(docsMap).getByRole("link", { name: "Styling" })).toHaveAttribute(
       "href",
       expect.stringContaining("theming"),
@@ -98,5 +106,30 @@ describe("ExamplePlayground", () => {
     expect(within(artifactPreview).getByText("const customized = true")).toBeInTheDocument()
     expect(within(artifactPreview).queryByRole("heading", { name: "Minimal app template" })).not.toBeInTheDocument()
     expect(screen.queryByText(/No adapter diagnostics for this transcript\./i)).not.toBeInTheDocument()
+  })
+
+  it("opens the layered agent showcase with a docs-backed link", async () => {
+    const user = userEvent.setup()
+    const showcaseTemplate = exampleTemplates.find((template) => template.id === "agent-showcase")
+
+    render(<ExamplePlayground />)
+
+    await user.click(screen.getByRole("button", { name: "Layered agent UI showcase" }))
+
+    const showcasePreview = screen.getByRole("region", { name: "Selected template preview" })
+
+    expect(screen.getByRole("button", { name: "Layered agent UI showcase" })).toHaveAttribute("aria-pressed", "true")
+    expect(showcaseTemplate?.docsPath).toBe("docs/guides/layered-public-api.md")
+    expect(screen.getByRole("link", { name: "Read docs" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("layered-public-api"),
+    )
+    expect(within(showcasePreview).getByRole("heading", { level: 2, name: "Layered agent UI showcase" })).toBeInTheDocument()
+    expect(within(showcasePreview).getByText("@researcher")).toBeInTheDocument()
+    expect(within(showcasePreview).getByText("Submitted command payload")).toBeInTheDocument()
+    expect(within(showcasePreview).getByText(/"id": "agent-research"/)).toBeInTheDocument()
+    expect(within(showcasePreview).getByText("Selected command metadata: agent=researcher, mcp=browser.search")).toBeInTheDocument()
+    expect(within(showcasePreview).getByRole("img", { name: "Uploaded product sketch" })).toBeInTheDocument()
+    expect(within(showcasePreview).getByText("Inspect image")).toBeInTheDocument()
   })
 })

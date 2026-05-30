@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
-import type { UiArtifactPart, UiMessage } from "../model/types"
-import { createChatRuntime } from "../runtime/create-chat-runtime"
+import type { UiArtifactPart, UiMessage } from "../../src/model/types"
+import { createChatRuntime } from "../../src/runtime/create-chat-runtime"
 import {
   getArtifactViewPayload,
   getAvailableMessageActions,
@@ -11,17 +11,15 @@ import {
   type UiMessageActionId,
   type UiPartActionDescriptor,
   type UiPartActionId,
-} from "./actions"
-import { ArtifactContainer } from "./artifact-container"
-import { ChatRoot } from "./chat-root"
-import { CurrentMessageProvider } from "./current-message"
+} from "../../src/react/actions"
+import { ArtifactContainer } from "../../src/react/artifact-container"
+import { ChatRoot } from "../../src/react/chat-root"
+import { CurrentMessageProvider } from "../../src/react/current-message"
 
 describe("actions", () => {
   it("exposes stable action id and descriptor types", () => {
     expectTypeOf<UiMessageActionId>().toEqualTypeOf<"copy" | "retry" | "regenerate">()
-    expectTypeOf<UiPartActionId>().toEqualTypeOf<
-      "copy" | "toggle-reasoning" | "toggle-tool-details" | "open-artifact-view"
-    >()
+    expectTypeOf<UiPartActionId>().toEqualTypeOf<"copy" | "toggle-reasoning" | "open-artifact-view">()
 
     expectTypeOf<UiMessageActionDescriptor>().toEqualTypeOf<{
       id: UiMessageActionId
@@ -76,25 +74,6 @@ describe("actions", () => {
     expect(reasoningActions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "toggle-reasoning", label: "Reasoning" }),
-      ]),
-    )
-
-    const toolCallActions = getAvailablePartActions({
-      id: "tool-1",
-      kind: "tool-call",
-      toolName: "searchDocs",
-      status: "complete",
-      inputSummary: "query",
-      outputSummary: "result",
-    })
-
-    expect(toolCallActions.map((action) => action.id)).toEqual([
-      "toggle-tool-details",
-      "copy",
-    ])
-    expect(toolCallActions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: "toggle-tool-details", label: "Tool details" }),
       ]),
     )
 
@@ -156,6 +135,17 @@ describe("actions", () => {
         kind: "image",
         url: "https://example.com/image.png",
       }),
+    ).toEqual([])
+
+    expect(
+      getAvailablePartActions({
+        id: "step-1",
+        kind: "step",
+        category: "tool",
+        status: "complete",
+        label: "Search docs",
+        outputSummary: "Found docs",
+      }).map((action) => action.id),
     ).toEqual([])
   })
 

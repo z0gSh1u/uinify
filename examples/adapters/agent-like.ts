@@ -1,4 +1,11 @@
-import { createAdapterRunner, type UiArtifact, type UiArtifactMetadataValue, type UiArtifactView, type UiMessageRole, type UiStreamEvent } from "../../src"
+import {
+  createAdapterRunner,
+  type UiArtifact,
+  type UiArtifactMetadataValue,
+  type UiArtifactView,
+  type UiMessageRole,
+  type UiStreamEvent,
+} from "../../src"
 
 type AgentLikeMessageStartedEvent = {
   type: "agent.message.started"
@@ -66,19 +73,6 @@ export type AgentLikeEvent =
   | AgentLikeToolEvent
   | AgentLikeArtifactEvent
   | AgentLikeMessageCompletedEvent
-
-function mapToolStatus(
-  eventType: AgentLikeToolEvent["type"],
-): Extract<UiStreamEvent, { type: "part.tool.updated" }>["status"] {
-  switch (eventType) {
-    case "agent.tool.started":
-      return "running"
-    case "agent.tool.completed":
-      return "complete"
-    case "agent.tool.failed":
-      return "error"
-  }
-}
 
 function mapArtifactViewKind(mediaType: string): UiArtifactView["kind"] {
   if (mediaType === "application/json") {
@@ -148,18 +142,43 @@ export function mapAgentLikeEvent(event: AgentLikeEvent): UiStreamEvent[] {
 
     case "agent.tool.started":
     case "agent.tool.completed":
-    case "agent.tool.failed":
+    case "agent.tool.failed": {
+      const baseStep = {
+        messageId: event.messageId,
+        partId: event.tool.id,
+        category: "tool" as const,
+        label: event.tool.name,
+        inputSummary: event.tool.input?.query ? `query: ${event.tool.input.query}` : undefined,
+      }
+
+      if (event.type === "agent.tool.started") {
+        return [
+          {
+            type: "part.step.started",
+            ...baseStep,
+          },
+        ]
+      }
+
+      if (event.type === "agent.tool.completed") {
+        return [
+          {
+            type: "part.step.completed",
+            ...baseStep,
+            outputSummary: event.tool.resultSummary,
+          },
+        ]
+      }
+
       return [
         {
-          type: "part.tool.updated",
-          messageId: event.messageId,
-          partId: event.tool.id,
-          toolName: event.tool.name,
-          status: mapToolStatus(event.type),
-          inputSummary: event.tool.input?.query ? `query: ${event.tool.input.query}` : undefined,
-          outputSummary: event.tool.resultSummary ?? event.tool.error,
+          type: "part.step.failed",
+          ...baseStep,
+          error: event.tool.error ?? "Tool failed",
+          outputSummary: event.tool.resultSummary,
         },
       ]
+    }
 
     case "agent.artifact.emitted":
       return [

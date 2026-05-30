@@ -56,7 +56,8 @@ export function MessageList({ messages }: MessageListProps) {
   const items = messages ?? state.messages
   const rendererKey = [
     getIdentityKey(renderers.renderReasoning),
-    getIdentityKey(renderers.renderToolCall),
+    getIdentityKey(renderers.renderStep),
+    getIdentityKey(renderers.renderImage),
     getIdentityKey(renderers.artifactRegistry),
     getIdentityKey(renderers.renderArtifactFallback),
     getIdentityKey(runtime),

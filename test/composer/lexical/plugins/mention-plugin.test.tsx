@@ -9,8 +9,8 @@ import {
   type LexicalEditor,
 } from "lexical"
 import { describe, expect, it, vi } from "vitest"
-import { MentionPlugin } from "./mention-plugin"
-import { LexicalComposer } from "../lexical-composer"
+import { MentionPlugin } from "../../../../src/composer/lexical/plugins/mention-plugin"
+import { LexicalComposer } from "../../../../src/composer/lexical/lexical-composer"
 
 function getEditor(element: HTMLElement) {
   return (element as HTMLElement & { __lexicalEditor?: LexicalEditor }).__lexicalEditor
@@ -81,9 +81,9 @@ describe("MentionPlugin", () => {
 
     render(
       <MentionPlugin
-        items={[
-          { id: "worker", label: "worker", insertText: "@worker " },
-          { id: "writer", label: "writer", insertText: "@writer " },
+        commands={[
+          { id: "worker", kind: "mention", label: "worker", insertText: "@worker ", trigger: "@" },
+          { id: "writer", kind: "mention", label: "writer", insertText: "@writer ", trigger: "@" },
         ]}
         onSelect={onSelect}
         query="@wo"
@@ -97,8 +97,10 @@ describe("MentionPlugin", () => {
 
     expect(onSelect).toHaveBeenCalledWith({
       id: "worker",
+      kind: "mention",
       label: "worker",
       insertText: "@worker ",
+      trigger: "@",
     })
   })
 
@@ -107,7 +109,7 @@ describe("MentionPlugin", () => {
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[{ id: "worker", kind: "mention", label: "worker", insertText: "@worker ", trigger: "@" }]}
         onSubmit={() => undefined}
       />,
     )
@@ -132,7 +134,7 @@ describe("MentionPlugin", () => {
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[{ id: "worker", kind: "mention", label: "worker", insertText: "@worker ", trigger: "@" }]}
         onSubmit={() => undefined}
       />,
     )
@@ -157,7 +159,7 @@ describe("MentionPlugin", () => {
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[{ id: "worker", kind: "mention", label: "worker", insertText: "@worker ", trigger: "@" }]}
         onSubmit={() => undefined}
       />,
     )
@@ -182,7 +184,7 @@ describe("MentionPlugin", () => {
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[{ id: "worker", kind: "mention", label: "worker", insertText: "@worker ", trigger: "@" }]}
         onSubmit={() => undefined}
       />,
     )

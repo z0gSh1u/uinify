@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createChatRuntime } from "./create-chat-runtime"
+import { createChatRuntime } from "../../src/runtime/create-chat-runtime"
 
 describe("createChatRuntime", () => {
   it("starts with an empty linear transcript", () => {

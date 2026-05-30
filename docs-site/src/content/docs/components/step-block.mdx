@@ -1,0 +1,67 @@
+---
+title: StepBlock
+description: Render agent steps by default and override step rendering without replacing MessageList.
+---
+
+`StepBlock` is the default React renderer for `UiStepPart`. It renders category, status, label, summaries, and errors with stable slots.
+
+## Rule
+
+Use `renderStep` before replacing `MessageList`. Replace `MessageList` only when the whole transcript layout is wrong for your product.
+
+## Default Rendering
+
+```tsx
+import { StepBlock } from "uinify/react"
+
+<StepBlock
+  part={{
+    id: "search-step",
+    kind: "step",
+    category: "tool",
+    status: "complete",
+    label: "Search docs",
+    inputSummary: "query: streaming",
+    outputSummary: "Found the stream mapping page.",
+  }}
+/>
+```
+
+## Override One Layer
+
+Override step rendering through `ChatRoot` renderers. This preserves virtualization, message actions, error boundaries, and the rest of the transcript shell.
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot
+  runtime={runtime}
+  renderers={{
+    renderStep: ({ part }) => (
+      <section data-slot="step" data-state={part.status} data-category={part.category}>
+        <strong>{part.label}</strong>
+        {part.outputSummary ? <p>{part.outputSummary}</p> : null}
+      </section>
+    ),
+  }}
+>
+  <MessageList />
+</ChatRoot>
+```
+
+## Stable Slots
+
+The default renderer exposes stable regions for styling:
+
+- `data-slot="step"`
+- `data-slot="step-header"`
+- `data-slot="step-title"`
+- `data-slot="step-badges"`
+- `data-slot="step-category"`
+- `data-slot="step-status"`
+- `data-slot="step-summary"`
+- `data-slot="step-input"`
+- `data-slot="step-output"`
+- `data-slot="step-error"`
+
+Use CSS tokens and slots first. Use `slotClassNames.step` when you need to attach a class to the step slot from React.

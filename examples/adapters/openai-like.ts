@@ -1,4 +1,11 @@
-import { createAdapterRunner, type UiArtifact, type UiArtifactMetadataValue, type UiArtifactView, type UiMessageRole, type UiStreamEvent } from "../../src"
+import {
+  createAdapterRunner,
+  type UiArtifact,
+  type UiArtifactMetadataValue,
+  type UiArtifactView,
+  type UiMessageRole,
+  type UiStreamEvent,
+} from "../../src"
 
 type OpenAiLikeResponseStartedChunk = {
   type: "response.started"
@@ -64,19 +71,6 @@ export type OpenAiLikeChunk =
   | OpenAiLikeArtifactChunk
   | OpenAiLikeResponseCompletedChunk
 
-function mapToolPhase(
-  phase: OpenAiLikeToolUpdatedChunk["tool_call"]["phase"],
-): Extract<UiStreamEvent, { type: "part.tool.updated" }>["status"] {
-  switch (phase) {
-    case "in_progress":
-      return "running"
-    case "finished":
-      return "complete"
-    case "failed":
-      return "error"
-  }
-}
-
 function mapArtifactViewKind(mimeType: string): UiArtifactView["kind"] {
   if (mimeType === "application/json") {
     return "structured"
@@ -122,6 +116,24 @@ function mapArtifact(asset: OpenAiLikeArtifactChunk["asset"]): UiArtifact {
   }
 }
 
+function summarizeToolArguments(argumentsText: string | undefined) {
+  if (!argumentsText) {
+    return undefined
+  }
+
+  try {
+    const parsed = JSON.parse(argumentsText) as { query?: unknown }
+
+    if (typeof parsed.query === "string") {
+      return `query: ${parsed.query}`
+    }
+  } catch {
+    return `arguments: ${argumentsText}`
+  }
+
+  return `arguments: ${argumentsText}`
+}
+
 export function mapOpenAiLikeChunk(chunk: OpenAiLikeChunk): UiStreamEvent[] {
   switch (chunk.type) {
     case "response.started":
@@ -143,20 +155,52 @@ export function mapOpenAiLikeChunk(chunk: OpenAiLikeChunk): UiStreamEvent[] {
         },
       ]
 
-    case "response.tool.updated":
+    case "response.tool.updated": {
+      const inputSummary = summarizeToolArguments(chunk.tool_call.arguments_text)
+      const baseStep = {
+        messageId: chunk.response_id,
+        partId: chunk.tool_call.call_id,
+        category: "tool" as const,
+        label: chunk.tool_call.name,
+        inputSummary,
+      }
+
+      if (chunk.tool_call.phase === "in_progress") {
+        return [
+          {
+            type: "part.step.started",
+            ...baseStep,
+          },
+        ]
+      }
+
+      if (chunk.tool_call.phase === "finished") {
+        return [
+          {
+            type: "part.step.started",
+            ...baseStep,
+          },
+          {
+            type: "part.step.completed",
+            ...baseStep,
+            outputSummary: chunk.tool_call.result?.summary,
+          },
+        ]
+      }
+
       return [
         {
-          type: "part.tool.updated",
-          messageId: chunk.response_id,
-          partId: chunk.tool_call.call_id,
-          toolName: chunk.tool_call.name,
-          status: mapToolPhase(chunk.tool_call.phase),
-          inputSummary: chunk.tool_call.arguments_text
-            ? `query: ${JSON.parse(chunk.tool_call.arguments_text).query as string}`
-            : undefined,
+          type: "part.step.started",
+          ...baseStep,
+        },
+        {
+          type: "part.step.failed",
+          ...baseStep,
+          error: chunk.tool_call.result?.summary ?? "Tool failed",
           outputSummary: chunk.tool_call.result?.summary,
         },
       ]
+    }
 
     case "response.artifact":
       return [

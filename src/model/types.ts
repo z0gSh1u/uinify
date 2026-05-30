@@ -11,6 +11,10 @@ export type UiImagePart = {
   kind: "image"
   url: string
   alt?: string
+  mimeType?: string
+  width?: number
+  height?: number
+  sourceAttachmentId?: string
 }
 
 export type UiReasoningPart = {
@@ -20,13 +24,23 @@ export type UiReasoningPart = {
   state: "streaming" | "complete"
 }
 
-export type UiToolCallPart = {
+export type UiStepCategory = "tool" | "retrieval" | "handoff" | "planner" | "workflow" | "skill" | "custom"
+
+export type UiStepStatus = "pending" | "running" | "complete" | "error"
+
+export type UiStepPart = {
   id: string
-  kind: "tool-call"
-  toolName: string
-  status: "input-streaming" | "running" | "complete" | "error"
-  inputSummary: string | null
-  outputSummary: string | null
+  kind: "step"
+  category: UiStepCategory
+  status: UiStepStatus
+  label: string
+  summary?: string
+  inputSummary?: string
+  outputSummary?: string
+  error?: string
+  startedAt?: string
+  completedAt?: string
+  metadata?: Record<string, unknown>
 }
 
 export type UiAttachmentStatus = "queued" | "uploading" | "uploaded" | "error" | "removed"
@@ -91,7 +105,7 @@ export type UiMessagePart =
   | UiTextPart
   | UiImagePart
   | UiReasoningPart
-  | UiToolCallPart
+  | UiStepPart
   | UiArtifactPart
   | UiAttachmentPart
 

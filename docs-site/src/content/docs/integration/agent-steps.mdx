@@ -1,0 +1,119 @@
+---
+title: Agent Steps
+description: Represent agent execution, including tool calls, as canonical transcript steps.
+---
+
+Agent work is represented as `step` message parts. A tool call is a step with `category: "tool"`, not a separate canonical tool call model.
+
+## Rule
+
+Map tools, retrieval, handoffs, planners, workflows, skills, and custom execution nodes to `step` parts. Use `category: "tool"` for tool calls.
+
+## Step Part Shape
+
+```ts
+type UiStepPart = {
+  id: string
+  kind: "step"
+  category: "tool" | "retrieval" | "handoff" | "planner" | "workflow" | "skill" | "custom"
+  status: "pending" | "running" | "complete" | "error"
+  label: string
+  summary?: string
+  inputSummary?: string
+  outputSummary?: string
+  error?: string
+  startedAt?: string
+  completedAt?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## Step Events
+
+Use step lifecycle events to update one part by `messageId` and `partId`.
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+export const stepEvents: UiStreamEvent[] = [
+  { type: "message.started", messageId: "assistant-1", role: "assistant" },
+  {
+    type: "part.step.started",
+    messageId: "assistant-1",
+    partId: "search-step",
+    category: "tool",
+    label: "Search docs",
+    inputSummary: "query: agent steps",
+  },
+  {
+    type: "part.step.completed",
+    messageId: "assistant-1",
+    partId: "search-step",
+    outputSummary: "Found the Agent Steps guide.",
+  },
+  { type: "message.completed", messageId: "assistant-1" },
+]
+```
+
+Use `part.step.updated` for partial progress and `part.step.failed` for recoverable step errors.
+
+```ts
+const failedToolStep: UiStreamEvent[] = [
+  {
+    type: "part.step.started",
+    messageId: "assistant-1",
+    partId: "browser-step",
+    category: "tool",
+    label: "browser.search",
+    inputSummary: "query: release notes",
+  },
+  {
+    type: "part.step.failed",
+    messageId: "assistant-1",
+    partId: "browser-step",
+    error: "Search backend unavailable",
+    outputSummary: "No search results were returned.",
+  },
+]
+```
+
+## Mapping Guidance
+
+Map host tool protocols into step events at the adapter boundary. Do not pass vendor-specific tool payloads into transcript state.
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+type HostToolEvent = {
+  messageId: string
+  toolCallId: string
+  name: string
+  input: string
+  output?: string
+}
+
+export function mapToolCompleted(event: HostToolEvent): UiStreamEvent[] {
+  return [
+    {
+      type: "part.step.started",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      category: "tool",
+      label: event.name,
+      inputSummary: event.input,
+    },
+    {
+      type: "part.step.completed",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      outputSummary: event.output,
+    },
+  ]
+}
+```
+
+## Error Handling
+
+A failed step is UI state. Use `status: "error"` through `part.step.failed` when one tool or retrieval node failed but the assistant message can still continue.
+
+Use `message.failed` only when the entire assistant message fails.

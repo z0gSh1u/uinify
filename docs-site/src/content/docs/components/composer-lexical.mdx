@@ -46,8 +46,10 @@ Your host should own:
 - attachment validation and upload lifecycle
 - final submit behavior
 - cancel and retry semantics
-- mentions, slash commands, and any app-specific policies
+- unified commands, command metadata, and any app-specific execution policies
 
 ## Related Exports
 
-The subpath also exposes helpers such as attachment utilities and plugin surfaces for mentions or slash commands. Reach for those only when the default composer behavior is close but not complete.
+The subpath also exposes attachment utilities and the unified `CommandPlugin` surface. Use `commands` on `LexicalComposer` first; reach for `CommandPlugin` only when the default composer behavior is close but not complete.
+
+Mentions and slash commands are trigger styles for the same command model. Model agents, MCP tools, skills, mentions, slash actions, and custom intent as `UiComposerCommand` records rather than separate mention or slash data models.

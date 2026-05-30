@@ -7,13 +7,14 @@ This page separates the surfaces intended for adoption from the surfaces that ar
 
 ## Recommended Surface
 
-Prefer building integrations on the narrowest stable surface:
+Prefer building integrations on the narrowest stable surface that solves the problem:
 
-- Core runtime entry points such as `createChatRuntime` and canonical `UiStreamEvent` mapping.
+- Core runtime entry points such as `createChatRuntime`, canonical `UiStreamEvent` mapping, `UiMessagePart`, `UiStepPart`, `UiImagePart`, and `UiComposerCommand`.
 - `createAdapterRunner` from the package root as the default stable adapter entry point.
-- Basic React rendering entry points such as `ChatRoot`, `MessageList`, `Message`, and `MessagePart`.
-- The documented extension seams in this docs set, including controlled `LexicalComposer` attachments and React renderer overrides through `RenderersProvider`.
-- Shared model contracts that those surfaces consume directly, such as message parts, artifacts, and attachment state values.
+- React transcript entry points such as `ChatRoot`, `MessageList`, `Message`, `MessagePart`, `StepBlock`, and `ImagePart`.
+- Renderer override seams such as `renderStep`, `renderImage`, `renderReasoning`, and artifact registry hooks.
+- Composer entry points such as `LexicalComposer`, structured command selections, and host-owned attachment submit values.
+- Styling hooks in `uinify/styles.css`, stable `data-slot` regions, and `slotClassNames`.
 
 This is the recommended surface because it matches the public exports and the docs-backed integration patterns.
 
@@ -24,10 +25,12 @@ This is the recommended surface because it matches the public exports and the do
 For styling and theming, prefer the documented hooks in this order:
 
 - CSS custom properties under the `--uinify-*` namespace in `uinify/styles.css`
-- Stable `data-slot` regions such as `message`, `message-parts`, `message-actions`, `part-actions`, `artifact-container`, `artifact-tabs`, `artifact-views`, `attachment-tray`, `attachment-actions`, and `attachment-part`
+- Stable `data-slot` regions such as `message`, `message-parts`, `message-actions`, `part-actions`, `step`, `step-header`, `step-category`, `step-status`, `image`, `artifact-container`, `artifact-tabs`, `artifact-views`, `attachment-tray`, `attachment-actions`, and `attachment-part`
 - `slotClassNames` keys that map directly to those documented stable regions
 
 Prefer tokens first, then stable slots and `slotClassNames`, and replace renderers only when the default structure is the wrong product shape rather than merely the wrong visual treatment.
+
+Commands are stable as composer input intent. Steps are stable as transcript output. Do not document command selections as tool execution results, and do not document tools as a separate canonical tool call transcript part.
 
 ## Reference-only Surface
 

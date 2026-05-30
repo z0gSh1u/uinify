@@ -8,10 +8,40 @@ import {
   type LexicalEditor,
 } from "lexical"
 import { describe, expect, it, vi } from "vitest"
-import type { UiComposerAttachment } from "../contracts"
-import { LexicalComposer } from "./lexical-composer"
+import type { UiComposerAttachment, UiComposerCommand, UiComposerCommandSelection, UiComposerValue } from "../../../src/composer/contracts"
+import { LexicalComposer } from "../../../src/composer/lexical/lexical-composer"
+
+const commandTypeFixture = {
+  id: "agent-research",
+  kind: "agent",
+  label: "Researcher",
+  insertText: "@researcher ",
+  trigger: "@",
+  description: "Route to the research subagent",
+  group: "Agents",
+  metadata: { agentId: "researcher" },
+} satisfies UiComposerCommand
+
+const commandSelectionTypeFixture = {
+  id: "agent-research",
+  kind: "agent",
+  label: "Researcher",
+  insertText: "@researcher ",
+  trigger: "@",
+  range: { start: 0, end: 12 },
+  description: "Route to the research subagent",
+  group: "Agents",
+  metadata: { agentId: "researcher" },
+} satisfies UiComposerCommandSelection
+
+void commandTypeFixture
+void commandSelectionTypeFixture
 
 function setEditorText(element: HTMLElement, text: string) {
+  setEditorTextWithCaret(element, text, text.length)
+}
+
+function setEditorTextWithCaret(element: HTMLElement, text: string, caretOffset: number) {
   const editor = getEditor(element)
 
   expect(editor).toBeDefined()
@@ -22,7 +52,7 @@ function setEditorText(element: HTMLElement, text: string) {
       const textNode = $createTextNode(text)
       root.clear()
       root.append($createParagraphNode().append(textNode))
-      textNode.select(text.length, text.length)
+      textNode.select(caretOffset, caretOffset)
     })
   })
 }
@@ -274,7 +304,128 @@ describe("LexicalComposer", () => {
       text: "Hello world",
       attachments: [expect.objectContaining({ name: "hello.txt", status: "queued" })],
       commands: [],
-      mentions: [],
+    })
+  })
+
+  it("submits pasted image attachments with file metadata", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const onAttachmentRetry = vi.fn()
+    const onAttachmentCancel = vi.fn()
+    const file = new File(["image-bytes"], "diagram.png", { type: "image/png" })
+
+    render(
+      <LexicalComposer
+        onAttachmentCancel={onAttachmentCancel}
+        onAttachmentRetry={onAttachmentRetry}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    firePasteWithFiles(textbox, [file])
+    setEditorText(textbox, "Describe this diagram")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Describe this diagram",
+      attachments: [
+        expect.objectContaining({
+          file,
+          name: "diagram.png",
+          mimeType: "image/png",
+          size: file.size,
+          status: "queued",
+        }),
+      ],
+      commands: [],
+    })
+    expect(onAttachmentRetry).not.toHaveBeenCalled()
+    expect(onAttachmentCancel).not.toHaveBeenCalled()
+  })
+
+  it("submits pasted image attachments with fallback names when browsers omit file names", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const file = new File(["image-bytes"], "", { type: "image/png" })
+
+    render(<LexicalComposer onSubmit={onSubmit} />)
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    firePasteWithFiles(textbox, [file])
+    setEditorText(textbox, "Describe this pasted image")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Describe this pasted image",
+      attachments: [
+        expect.objectContaining({
+          file,
+          name: "pasted-image.png",
+          mimeType: "image/png",
+          size: file.size,
+          status: "queued",
+        }),
+      ],
+      commands: [],
+    })
+  })
+
+  it("submits pasted non-image attachments with file metadata", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const file = new File(["hello"], "hello.txt", { type: "text/plain" })
+
+    render(<LexicalComposer onSubmit={onSubmit} />)
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    firePasteWithFiles(textbox, [file])
+    setEditorText(textbox, "Read this file")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Read this file",
+      attachments: [
+        expect.objectContaining({
+          file,
+          name: "hello.txt",
+          mimeType: "text/plain",
+          size: file.size,
+          status: "queued",
+        }),
+      ],
+      commands: [],
+    })
+  })
+
+  it("submits pasted non-image attachments with fallback names when browsers omit file names", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const file = new File(["notes"], "", { type: "text/plain" })
+
+    render(<LexicalComposer onSubmit={onSubmit} />)
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    firePasteWithFiles(textbox, [file])
+    setEditorText(textbox, "Read this pasted file")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Read this pasted file",
+      attachments: [
+        expect.objectContaining({
+          file,
+          name: "pasted-file.txt",
+          mimeType: "text/plain",
+          size: file.size,
+          status: "queued",
+        }),
+      ],
+      commands: [],
     })
   })
 
@@ -381,7 +532,6 @@ describe("LexicalComposer", () => {
         },
       ],
       commands: [],
-      mentions: [],
     })
   })
 
@@ -491,7 +641,6 @@ describe("LexicalComposer", () => {
         },
       ],
       commands: [],
-      mentions: [],
     })
   })
 
@@ -554,112 +703,245 @@ describe("LexicalComposer", () => {
     })
   })
 
-  it("submits selected slash commands and mentions", async () => {
+  it("submits selected unified commands with metadata and ranges", async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[
+          {
+            id: "agent-research",
+            kind: "agent",
+            label: "Researcher",
+            insertText: "@researcher ",
+            trigger: "@",
+            metadata: { agentId: "researcher" },
+          },
+          {
+            id: "slash-draft",
+            kind: "slash",
+            label: "draft",
+            insertText: "/draft ",
+            trigger: "/",
+          },
+        ]}
         onSubmit={onSubmit}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 
     const textbox = screen.getByRole("textbox", { name: "Message" })
 
-    setEditorText(textbox, "/ag")
+    setEditorText(textbox, "/dr")
 
-    await user.click(await screen.findByRole("button", { name: "agent" }))
+    await user.click(await screen.findByRole("button", { name: /draft/i }))
 
     await waitFor(() => {
-      expect(getEditorText(textbox)).toBe("/agent ")
+      expect(getEditorText(textbox)).toBe("/draft ")
     })
 
-    setEditorText(textbox, "/agent @wo")
+    setEditorText(textbox, "/draft @res")
 
-    await user.click(await screen.findByRole("button", { name: "worker" }))
+    await user.click(await screen.findByRole("button", { name: /Researcher/i }))
 
     await waitFor(() => {
-      expect(getEditorText(textbox)).toBe("/agent @worker ")
+      expect(getEditorText(textbox)).toBe("/draft @researcher ")
     })
 
     await user.click(screen.getByRole("button", { name: /send/i }))
 
     expect(onSubmit).toHaveBeenCalledWith({
-      text: "/agent @worker ",
+      text: "/draft @researcher ",
       attachments: [],
-      commands: ["agent"],
-      mentions: ["worker"],
+      commands: [
+        {
+          id: "slash-draft",
+          kind: "slash",
+          label: "draft",
+          insertText: "/draft ",
+          trigger: "/",
+          range: { start: 0, end: 7 },
+        },
+        {
+          id: "agent-research",
+          kind: "agent",
+          label: "Researcher",
+          insertText: "@researcher ",
+          trigger: "@",
+          range: { start: 7, end: 19 },
+          metadata: { agentId: "researcher" },
+        },
+      ],
     })
   })
 
-  it("derives commands and mentions from the final text snapshot on submit", async () => {
+  it("shifts existing selected command ranges when inserting a command before them", async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[
+          { id: "agent-research", kind: "agent", label: "Researcher", insertText: "@researcher ", trigger: "@" },
+          { id: "slash-draft", kind: "slash", label: "draft", insertText: "/draft ", trigger: "/" },
+        ]}
         onSubmit={onSubmit}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 
     const textbox = screen.getByRole("textbox", { name: "Message" })
 
-    setEditorText(textbox, "/ag")
-    await user.click(await screen.findByRole("button", { name: "agent" }))
+    setEditorText(textbox, "@res later /dr")
+    await user.click(await screen.findByRole("button", { name: /draft/i }))
 
     await waitFor(() => {
-      expect(getEditorText(textbox)).toBe("/agent ")
+      expect(getEditorText(textbox)).toBe("@res later /draft ")
     })
 
-    setEditorText(textbox, "manual /agent @worker")
+    setEditorTextWithCaret(textbox, "@res later /draft ", 4)
+    await user.click(await screen.findByRole("button", { name: /Researcher/i }))
+
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("@researcher later /draft ")
+    })
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    const submitValue = onSubmit.mock.calls[0]?.[0] as UiComposerValue | undefined
+
+    expect(submitValue).toEqual({
+      text: "@researcher later /draft ",
+      attachments: [],
+      commands: [
+        expect.objectContaining({ id: "slash-draft", range: { start: 18, end: 25 } }),
+        expect.objectContaining({ id: "agent-research", range: { start: 0, end: 12 } }),
+      ],
+    })
+    expect(submitValue?.commands.map((command) => submitValue.text.slice(command.range.start, command.range.end))).toEqual([
+      "/draft ",
+      "@researcher ",
+    ])
+  })
+
+  it("shifts selected command ranges when text is inserted before them", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        commands={[{ id: "slash-draft", kind: "slash", label: "draft", insertText: "/draft ", trigger: "/" }]}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/dr")
+    await user.click(await screen.findByRole("button", { name: /draft/i }))
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/draft ")
+    })
+
+    setEditorText(textbox, "Please /draft ")
     await user.click(screen.getByRole("button", { name: /send/i }))
 
     expect(onSubmit).toHaveBeenCalledWith({
-      text: "manual /agent @worker",
+      text: "Please /draft ",
       attachments: [],
-      commands: ["agent"],
-      mentions: ["worker"],
+      commands: [expect.objectContaining({ id: "slash-draft", range: { start: 7, end: 14 } })],
     })
   })
 
-  it("does not submit stale command or mention ids after the final text changes", async () => {
+  it("does not infer unselected commands by parsing manually typed text", async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
 
     render(
       <LexicalComposer
-        mentions={[{ id: "worker", label: "worker", insertText: "@worker " }]}
+        commands={[
+          { id: "agent-research", kind: "agent", label: "Researcher", insertText: "@researcher ", trigger: "@" },
+          { id: "slash-draft", kind: "slash", label: "draft", insertText: "/draft ", trigger: "/" },
+        ]}
         onSubmit={onSubmit}
-        slashCommands={[{ id: "agent", label: "agent", insertText: "/agent " }]}
       />,
     )
 
     const textbox = screen.getByRole("textbox", { name: "Message" })
 
-    setEditorText(textbox, "/ag")
-    await user.click(await screen.findByRole("button", { name: "agent" }))
-    await waitFor(() => {
-      expect(getEditorText(textbox)).toBe("/agent ")
-    })
-
-    setEditorText(textbox, "/agent @wo")
-    await user.click(await screen.findByRole("button", { name: "worker" }))
-    await waitFor(() => {
-      expect(getEditorText(textbox)).toBe("/agent @worker ")
-    })
-
-    setEditorText(textbox, "manual /age @workerish")
+    setEditorText(textbox, "manual /draft @researcher")
     await user.click(screen.getByRole("button", { name: /send/i }))
 
     expect(onSubmit).toHaveBeenCalledWith({
-      text: "manual /age @workerish",
+      text: "manual /draft @researcher",
       attachments: [],
       commands: [],
-      mentions: [],
+    })
+  })
+
+  it("drops selected commands whose inserted range no longer matches the final text", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        commands={[{ id: "slash-draft", kind: "slash", label: "draft", insertText: "/draft ", trigger: "/" }]}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/dr")
+    await user.click(await screen.findByRole("button", { name: /draft/i }))
+    await waitFor(() => {
+      expect(getEditorText(textbox)).toBe("/draft ")
+    })
+
+    setEditorText(textbox, "manual /dra")
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "manual /dra",
+      attachments: [],
+      commands: [],
+    })
+  })
+
+  it("does not select disabled commands", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <LexicalComposer
+        commands={[
+          {
+            id: "tool-search",
+            kind: "tool",
+            label: "Search",
+            insertText: "/search ",
+            trigger: "/",
+            disabledReason: "Connect MCP first",
+          },
+        ]}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "/sea")
+
+    const commandButton = await screen.findByRole("button", { name: /Search/i })
+
+    expect(commandButton).toBeDisabled()
+
+    await user.click(commandButton)
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "/sea",
+      attachments: [],
+      commands: [],
     })
   })
 })

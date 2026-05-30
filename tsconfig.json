@@ -10,5 +10,5 @@
     "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
     "baseUrl": "."
   },
-  "include": ["src", "examples", "vite.config.ts", "tsup.config.ts"]
+  "include": ["src", "test", "examples", "vite.config.ts", "tsup.config.ts"]
 }

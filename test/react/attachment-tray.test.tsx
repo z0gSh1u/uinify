@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { AttachmentPart } from "./attachment-part"
-import { AttachmentTray } from "./attachment-tray"
+import { AttachmentPart } from "../../src/react/attachment-part"
+import { AttachmentTray } from "../../src/react/attachment-tray"
 
 describe("AttachmentTray", () => {
   it("renders lifecycle details and retry for error attachments", async () => {

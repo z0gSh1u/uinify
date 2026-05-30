@@ -8,6 +8,9 @@ export * from "./runtime/create-chat-runtime"
 export * from "./runtime/use-chat-session"
 export type {
   UiComposerAttachment,
-  UiComposerChoice,
+  UiComposerCommand,
+  UiComposerCommandKind,
+  UiComposerCommandSelection,
+  UiComposerCommandTrigger,
   UiComposerValue,
 } from "./composer/contracts"

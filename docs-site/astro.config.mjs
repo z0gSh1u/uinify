@@ -21,6 +21,7 @@ export default defineConfig({
           label: "Guides",
           items: [
             { slug: "guides/core-concepts" },
+            { slug: "guides/layered-public-api" },
             { slug: "guides/examples" },
           ],
         },
@@ -28,6 +29,8 @@ export default defineConfig({
           label: "Integration",
           items: [
             { slug: "integration/stream-mapping" },
+            { slug: "integration/agent-steps" },
+            { slug: "integration/multimodal-images" },
             { slug: "integration/sse" },
             { slug: "integration/upload-lifecycle" },
           ],
@@ -36,7 +39,9 @@ export default defineConfig({
           label: "Components",
           items: [
             { slug: "components/message-list" },
+            { slug: "components/step-block" },
             { slug: "components/composer-lexical" },
+            { slug: "components/composer-commands" },
           ],
         },
         {

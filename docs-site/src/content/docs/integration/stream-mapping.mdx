@@ -61,6 +61,59 @@ for (const streamEvent of mapHostEvent(event)) {
 }
 ```
 
+## Agent Steps And Images
+
+Tool calls and other agent execution nodes map to step events. A tool call is a `step` with `category: "tool"`.
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+type HostToolCompleted = {
+  kind: "tool.completed"
+  messageId: string
+  toolCallId: string
+  name: string
+  input: string
+  output: string
+}
+
+export function mapToolCompleted(event: HostToolCompleted): UiStreamEvent[] {
+  return [
+    {
+      type: "part.step.started",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      category: "tool",
+      label: event.name,
+      inputSummary: event.input,
+    },
+    {
+      type: "part.step.completed",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      outputSummary: event.output,
+    },
+  ]
+}
+```
+
+Images map to transcript image parts after the host has a displayable URL.
+The `partId` supplies the image part `id`; the runtime supplies `kind: "image"`.
+
+```ts
+const imageEvent: UiStreamEvent = {
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: {
+    url: "https://cdn.example.com/sketch.png",
+    alt: "Uploaded sketch",
+    mimeType: "image/png",
+    sourceAttachmentId: "attachment-1",
+  },
+}
+```
+
 ## Stable Adapter Contract
 
 When your mapper becomes a shared integration surface, wrap the pure mapper with `createAdapterRunner`. That gives you a stable result shape with canonical `.events` plus `.diagnostics` for suspicious ordering and invalid artifact views.
@@ -101,4 +154,6 @@ for (const result of incomingEvents.map(adaptHostEvent)) {
 
 `message.started` must arrive before any part events for that message. The runtime does not buffer orphan part events.
 
-Mapping ends at `UiStreamEvent`. Do not pass vendor-specific payloads or transport-specific event objects into `uinify` state. Use `createAdapterResult` and `validateAdapterEvents` directly only if `createAdapterRunner` is not enough for your wrapper.
+Mapping ends at `UiStreamEvent`. Do not pass vendor-specific payloads or transport-specific event objects into `uinify` state. Use `step` events for tools and agent execution, and use `part.image.emitted` only after host code has a displayable image URL.
+
+Use `createAdapterResult` and `validateAdapterEvents` directly only if `createAdapterRunner` is not enough for your wrapper.

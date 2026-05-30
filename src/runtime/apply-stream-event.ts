@@ -1,4 +1,4 @@
-import type { UiAttachment, UiMessage, UiMessagePart, UiRuntimeState } from "../model/types"
+import type { UiAttachment, UiImagePart, UiMessage, UiMessagePart, UiRuntimeState, UiStepPart } from "../model/types"
 import type { UiStreamEvent } from "./events"
 
 function appendWarning(state: UiRuntimeState, warning: string): UiRuntimeState {
@@ -107,6 +107,32 @@ function nextAttachment(current: UiAttachment | undefined, incoming: UiAttachmen
   }
 }
 
+function mergeStepPart(
+  current: UiStepPart | undefined,
+  patch: Partial<UiStepPart> & Pick<UiStepPart, "id" | "kind" | "status">,
+): UiStepPart {
+  const next = {
+    ...(current ?? {
+      category: "custom",
+      label: patch.id,
+    }),
+    ...patch,
+    metadata: patch.metadata ?? current?.metadata,
+  }
+
+  if (next.status === "running") {
+    delete next.error
+    delete next.outputSummary
+    delete next.completedAt
+  }
+
+  if (next.status === "complete") {
+    delete next.error
+  }
+
+  return next
+}
+
 export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): UiRuntimeState {
   switch (event.type) {
     case "message.started":
@@ -181,28 +207,121 @@ export function applyStreamEvent(state: UiRuntimeState, event: UiStreamEvent): U
         }
       })
 
-    case "part.tool.updated":
+    case "part.step.started":
       return withMessage(state, event.messageId, (message) => {
-        const current = message.parts.find(
-          (part) => part.id === event.partId && part.kind === "tool-call",
+        const currentStep = message.parts.find(
+          (part): part is UiStepPart => part.id === event.partId && part.kind === "step",
         )
-        const inputSummary =
-          event.inputSummary ?? (current?.kind === "tool-call" ? current.inputSummary : null)
-        const outputSummary =
-          event.outputSummary ?? (current?.kind === "tool-call" ? current.outputSummary : null)
 
         return {
           ...message,
-          parts: upsertPart(message.parts, {
-            id: event.partId,
-            kind: "tool-call",
-            toolName: event.toolName,
-            status: event.status,
-            inputSummary,
-            outputSummary,
-          }),
+          parts: upsertPart(
+            message.parts,
+            mergeStepPart(currentStep, {
+              id: event.partId,
+              kind: "step",
+              category: event.category,
+              status: "running",
+              label: event.label,
+              ...(event.summary !== undefined ? { summary: event.summary } : {}),
+              ...(event.inputSummary !== undefined ? { inputSummary: event.inputSummary } : {}),
+              ...(event.startedAt !== undefined ? { startedAt: event.startedAt } : {}),
+              ...(event.metadata !== undefined ? { metadata: event.metadata } : {}),
+            }),
+          ),
         }
       })
+
+    case "part.step.updated":
+      return withMessage(state, event.messageId, (message) => {
+        const currentStep = message.parts.find(
+          (part): part is UiStepPart => part.id === event.partId && part.kind === "step",
+        )
+
+        return {
+          ...message,
+          parts: upsertPart(
+            message.parts,
+            mergeStepPart(currentStep, {
+              id: event.partId,
+              kind: "step",
+              status: event.status ?? currentStep?.status ?? "running",
+              ...(event.category !== undefined ? { category: event.category } : {}),
+              ...(event.label !== undefined ? { label: event.label } : {}),
+              ...(event.summary !== undefined ? { summary: event.summary } : {}),
+              ...(event.inputSummary !== undefined ? { inputSummary: event.inputSummary } : {}),
+              ...(event.outputSummary !== undefined ? { outputSummary: event.outputSummary } : {}),
+              ...(event.error !== undefined ? { error: event.error } : {}),
+              ...(event.startedAt !== undefined ? { startedAt: event.startedAt } : {}),
+              ...(event.completedAt !== undefined ? { completedAt: event.completedAt } : {}),
+              ...(event.metadata !== undefined ? { metadata: event.metadata } : {}),
+            }),
+          ),
+        }
+      })
+
+    case "part.step.completed":
+      return withMessage(state, event.messageId, (message) => {
+        const currentStep = message.parts.find(
+          (part): part is UiStepPart => part.id === event.partId && part.kind === "step",
+        )
+
+        return {
+          ...message,
+          parts: upsertPart(
+            message.parts,
+            mergeStepPart(currentStep, {
+              id: event.partId,
+              kind: "step",
+              status: "complete",
+              ...(event.category !== undefined ? { category: event.category } : {}),
+              ...(event.label !== undefined ? { label: event.label } : {}),
+              ...(event.summary !== undefined ? { summary: event.summary } : {}),
+              ...(event.inputSummary !== undefined ? { inputSummary: event.inputSummary } : {}),
+              ...(event.outputSummary !== undefined ? { outputSummary: event.outputSummary } : {}),
+              ...(event.completedAt !== undefined ? { completedAt: event.completedAt } : {}),
+              ...(event.metadata !== undefined ? { metadata: event.metadata } : {}),
+            }),
+          ),
+        }
+      })
+
+    case "part.step.failed":
+      return withMessage(state, event.messageId, (message) => {
+        const currentStep = message.parts.find(
+          (part): part is UiStepPart => part.id === event.partId && part.kind === "step",
+        )
+
+        return {
+          ...message,
+          parts: upsertPart(
+            message.parts,
+            mergeStepPart(currentStep, {
+              id: event.partId,
+              kind: "step",
+              status: "error",
+              error: event.error,
+              ...(event.category !== undefined ? { category: event.category } : {}),
+              ...(event.label !== undefined ? { label: event.label } : {}),
+              ...(event.summary !== undefined ? { summary: event.summary } : {}),
+              ...(event.inputSummary !== undefined ? { inputSummary: event.inputSummary } : {}),
+              ...(event.outputSummary !== undefined ? { outputSummary: event.outputSummary } : {}),
+              ...(event.completedAt !== undefined ? { completedAt: event.completedAt } : {}),
+              ...(event.metadata !== undefined ? { metadata: event.metadata } : {}),
+            }),
+          ),
+        }
+      })
+
+    case "part.image.emitted":
+      return withMessage(state, event.messageId, (message) => ({
+        ...message,
+        parts: upsertPart(message.parts, {
+          ...event.image,
+          id: event.partId,
+          kind: "image",
+        } satisfies UiImagePart),
+      }))
 
     case "part.artifact.emitted":
       return withMessage(state, event.messageId, (message) => ({

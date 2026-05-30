@@ -1,29 +1,16 @@
-import type { UiComposerChoice } from "../../contracts"
+import type { UiComposerCommand } from "../../contracts"
+import { CommandPlugin } from "./command-plugin"
 
 export type SlashCommandPluginProps = {
   query: string
-  items: UiComposerChoice[]
-  onSelect: (item: UiComposerChoice) => void
+  commands: UiComposerCommand[]
+  onSelect: (command: UiComposerCommand) => void
 }
 
-export function SlashCommandPlugin({ query, items, onSelect }: SlashCommandPluginProps) {
+export function SlashCommandPlugin({ query, commands, onSelect }: SlashCommandPluginProps) {
   if (!query.startsWith("/")) {
     return null
   }
 
-  const matches = items.filter((item) => item.label.startsWith(query.slice(1)))
-
-  if (matches.length === 0) {
-    return null
-  }
-
-  return (
-    <div data-slot="slash-menu">
-      {matches.map((item) => (
-        <button key={item.id} onClick={() => onSelect(item)} type="button">
-          {item.label}
-        </button>
-      ))}
-    </div>
-  )
+  return <CommandPlugin commands={commands} onSelect={onSelect} query={query} />
 }
