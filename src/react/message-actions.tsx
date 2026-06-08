@@ -10,7 +10,7 @@ export function MessageActions({ message }: MessageActionsProps) {
   const actions = getAvailableMessageActions(message)
   const { onMessageAction } = useChatActionHandlers()
 
-  if (actions.length === 0) {
+  if (!onMessageAction || actions.length === 0) {
     return null
   }
 

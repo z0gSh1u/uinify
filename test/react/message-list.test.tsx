@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import type { CSSProperties } from "react"
 import type { UiMessage } from "../../src/model/types"
 import { createChatRuntime } from "../../src/runtime/create-chat-runtime"
 import { ChatRoot } from "../../src/react/chat-root"
@@ -7,9 +8,13 @@ import { MessageList } from "../../src/react/message-list"
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 let virtuosoProps: {
+  alignToBottom?: boolean
   computeItemKey?: (index: number, message: UiMessage) => string
   data: UiMessage[]
+  initialItemCount?: number
+  initialTopMostItemIndex?: { align: "center" | "end" | "start"; index: "LAST" | number } | number
   itemContent: (index: number, message?: UiMessage) => React.ReactNode
+  style?: CSSProperties
   totalCount: number
 } | null = null
 
@@ -21,20 +26,37 @@ afterEach(() => {
 
 vi.mock("react-virtuoso", () => ({
   Virtuoso: ({
+    alignToBottom,
     computeItemKey,
     data,
+    initialItemCount,
+    initialTopMostItemIndex,
     itemContent,
+    style,
     totalCount,
   }: {
+    alignToBottom?: boolean
     computeItemKey?: (index: number, message: UiMessage) => string
     data: UiMessage[]
+    initialItemCount?: number
+    initialTopMostItemIndex?: { align: "center" | "end" | "start"; index: "LAST" | number } | number
     itemContent: (index: number, message?: UiMessage) => React.ReactNode
+    style?: CSSProperties
     totalCount: number
   }) => {
-    virtuosoProps = { computeItemKey, data, itemContent, totalCount }
+    virtuosoProps = {
+      alignToBottom,
+      computeItemKey,
+      data,
+      initialItemCount,
+      initialTopMostItemIndex,
+      itemContent,
+      style,
+      totalCount,
+    }
 
     return (
-      <div data-testid="virtuoso-mock" data-count={totalCount}>
+      <div data-testid="virtuoso-mock" data-count={totalCount} style={style}>
         {data.map((message, index) => (
           <div key={computeItemKey?.(index, message) ?? index}>{itemContent(index, message)}</div>
         ))}
@@ -72,6 +94,32 @@ describe("MessageList", () => {
 
     expect(screen.getByTestId("virtuoso-mock")).toHaveAttribute("data-count", "1")
     expect(screen.getByText("Hello")).toBeInTheDocument()
+  })
+
+  it("provides a default minimum viewport height for the virtualized list", () => {
+    render(<MessageList messages={[demoMessages[0]!]} />)
+
+    expect(virtuosoProps?.style).toMatchObject({ minHeight: "20rem" })
+  })
+
+  it("does not bottom-align a single-message transcript", () => {
+    render(<MessageList messages={[demoMessages[0]!]} />)
+
+    expect(virtuosoProps?.alignToBottom).toBeUndefined()
+    expect(virtuosoProps?.initialTopMostItemIndex).toBeUndefined()
+  })
+
+  it("renders a single-message transcript on the initial pass", () => {
+    render(<MessageList messages={[demoMessages[0]!]} />)
+
+    expect(virtuosoProps?.initialItemCount).toBe(1)
+  })
+
+  it("starts multi-message transcripts at the latest message", () => {
+    render(<MessageList messages={demoMessages} />)
+
+    expect(virtuosoProps?.alignToBottom).toBeUndefined()
+    expect(virtuosoProps?.initialTopMostItemIndex).toEqual({ align: "end", index: "LAST" })
   })
 
   it("uses message ids for Virtuoso row identity", () => {

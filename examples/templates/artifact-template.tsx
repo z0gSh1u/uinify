@@ -32,6 +32,10 @@ export function ArtifactTemplate() {
         id: "artifact-1",
         kind: "code",
         title: "Artifact customization template",
+        metadata: {
+          language: "TypeScript",
+          renderer: "custom registry",
+        },
         views: [
           {
             id: "source",

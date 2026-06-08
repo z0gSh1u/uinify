@@ -46,6 +46,7 @@ export type LexicalComposerProps = {
   onAttachmentCancel?: (attachment: UiComposerAttachment) => void
   sendPolicy?: "allow-pending" | "uploaded-only"
   commands?: UiComposerCommand[]
+  attachmentAccept?: string
 }
 
 export function LexicalComposer({
@@ -58,9 +59,11 @@ export function LexicalComposer({
   onAttachmentCancel,
   sendPolicy = "allow-pending",
   commands = [],
+  attachmentAccept,
 }: LexicalComposerProps) {
   const [text, setText] = useState("")
   const editorRef = useRef<LexicalEditor | null>(null)
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null)
   const lastTextRef = useRef("")
   const lastActiveTokenStateRef = useRef<ActiveTokenState>({ token: "", range: null })
   const [uncontrolledAttachments, setUncontrolledAttachments] = useState(initialAttachments)
@@ -292,21 +295,23 @@ export function LexicalComposer({
             editorRef.current = editor
           }}
         />
-        <PlainTextPlugin
-          contentEditable={
-            <ContentEditable
-              ariaLabel="Message"
-              data-slot="composer-editor"
-              onInput={(event) => {
-                updateTextFromEditor(event.currentTarget.textContent ?? "")
-              }}
-              onDrop={attachmentHandlers.onDrop}
-              onPaste={attachmentHandlers.onPaste}
-            />
-          }
-          placeholder={<span>Message</span>}
-          ErrorBoundary={({ children }) => <>{children}</>}
-        />
+        <div data-slot="composer-input">
+          <PlainTextPlugin
+            contentEditable={
+              <ContentEditable
+                ariaLabel="Message"
+                data-slot="composer-editor"
+                onInput={(event) => {
+                  updateTextFromEditor(event.currentTarget.textContent ?? "")
+                }}
+                onDrop={attachmentHandlers.onDrop}
+                onPaste={attachmentHandlers.onPaste}
+              />
+            }
+            placeholder={<span data-slot="composer-placeholder">Message</span>}
+            ErrorBoundary={({ children }) => <>{children}</>}
+          />
+        </div>
         <HistoryPlugin />
         <OnChangePlugin
           onChange={(editorState) => {
@@ -343,29 +348,56 @@ export function LexicalComposer({
         }}
       />
 
-      <button
-        data-send-blocked-reason={submitBlockedReason ?? undefined}
-        disabled={isSubmitBlocked}
-        onClick={() => {
-          if (isSubmitBlocked) {
-            return
-          }
+      <div data-slot="composer-actions">
+        <button
+          data-slot="composer-attachment-button"
+          onClick={() => attachmentInputRef.current?.click()}
+          type="button"
+        >
+          Attach
+        </button>
+        <input
+          accept={attachmentAccept}
+          aria-label="Attach file"
+          data-slot="composer-attachment-input"
+          multiple
+          onChange={(event) => {
+            const files = event.currentTarget.files
 
-          const submitCommands = selectedCommands.filter(
-            (selection) => text.slice(selection.range.start, selection.range.end) === selection.insertText,
-          )
+            if (files && files.length > 0) {
+              attachmentHandlers.addFiles(files)
+            }
 
-          onSubmit({
-            text,
-            attachments: submittableAttachments,
-            commands: submitCommands,
-          })
-          resetComposer()
-        }}
-        type="button"
-      >
-        Send
-      </button>
+            event.currentTarget.value = ""
+          }}
+          ref={attachmentInputRef}
+          type="file"
+        />
+        <button
+          data-slot="composer-send-button"
+          data-send-blocked-reason={submitBlockedReason ?? undefined}
+          disabled={isSubmitBlocked}
+          onClick={() => {
+            if (isSubmitBlocked) {
+              return
+            }
+
+            const submitCommands = selectedCommands.filter(
+              (selection) => text.slice(selection.range.start, selection.range.end) === selection.insertText,
+            )
+
+            onSubmit({
+              text,
+              attachments: submittableAttachments,
+              commands: submitCommands,
+            })
+            resetComposer()
+          }}
+          type="button"
+        >
+          Send
+        </button>
+      </div>
     </div>
   )
 }

@@ -66,6 +66,24 @@ describe("ChatRoot", () => {
     )
   })
 
+  it("hides action surfaces that do not have host handlers", () => {
+    const runtime = createChatRuntime({ conversationId: "no-action-handlers" })
+
+    runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
+    runtime.dispatch({ type: "part.text.delta", messageId: "m1", partId: "p1", delta: "Hello" })
+    runtime.dispatch({ type: "message.completed", messageId: "m1" })
+
+    render(
+      <ChatRoot runtime={runtime}>
+        <MessageList />
+      </ChatRoot>,
+    )
+
+    expect(screen.queryByRole("group", { name: "Message actions" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Text part actions" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Message feedback" })).not.toBeInTheDocument()
+  })
+
   it("applies slotClassNames to newly documented stable slots", () => {
     const runtime = createChatRuntime({ conversationId: "slot-classes" })
     const file = new File(["hello"], "draft.txt", { type: "text/plain" })
@@ -87,6 +105,8 @@ describe("ChatRoot", () => {
     render(
       <ChatRoot
         runtime={runtime}
+        onMessageAction={vi.fn()}
+        onPartAction={vi.fn()}
         slotClassNames={{
           messageActions: "custom-message-actions",
           partActions: "custom-part-actions",
@@ -140,6 +160,7 @@ describe("ChatRoot", () => {
     render(
       <ChatRoot
         runtime={runtime}
+        onMessageAction={vi.fn()}
         slotClassNames={{
           messageActions: "custom-message-actions custom-shared-actions",
         }}
@@ -361,6 +382,8 @@ describe("ChatRoot", () => {
   it("exposes stable slot and state metadata across message, artifact, attachment, and action regions", () => {
     const runtime = createChatRuntime({ conversationId: "slots" })
     const file = new File(["hello"], "draft.txt", { type: "text/plain" })
+    const onMessageAction = vi.fn()
+    const onPartAction = vi.fn()
     const onRemove = vi.fn()
 
     runtime.dispatch({ type: "message.started", messageId: "m1", role: "assistant" })
@@ -389,7 +412,7 @@ describe("ChatRoot", () => {
     runtime.dispatch({ type: "message.completed", messageId: "m1" })
 
     render(
-      <ChatRoot runtime={runtime}>
+      <ChatRoot runtime={runtime} onMessageAction={onMessageAction} onPartAction={onPartAction}>
         <>
           <MessageList />
           <AttachmentTray
@@ -494,7 +517,6 @@ describe("ChatRoot", () => {
     const message = screen.getByText("Hello").closest('[data-slot="message"]')
 
     expect(message).toBeTruthy()
-    expect(within(message as HTMLElement).getByRole("group", { name: "Message feedback" })).toBeTruthy()
 
     const messageActions = within(message as HTMLElement).getByRole("group", {
       name: "Message actions",

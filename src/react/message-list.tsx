@@ -1,4 +1,5 @@
 import { Virtuoso } from "react-virtuoso"
+import type { CSSProperties } from "react"
 import type { createChatRuntime } from "../runtime/create-chat-runtime"
 import type { UiRuntimeState, UiMessage } from "../model/types"
 import { useChatSession } from "../runtime/use-chat-session"
@@ -47,13 +48,24 @@ function getIdentityKey(value: object | null | undefined) {
 
 export type MessageListProps = {
   messages?: UiMessage[]
+  style?: CSSProperties
 }
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({ messages, style }: MessageListProps) {
   const runtime = useOptionalChatRuntime()
   const renderers = useRenderers()
   const state = useChatSession(runtime ?? EMPTY_RUNTIME)
   const items = messages ?? state.messages
+  const listStyle = {
+    minHeight: "20rem",
+    ...style,
+  }
+  const initialPositionProps =
+    items.length > 1
+      ? { initialTopMostItemIndex: { align: "end" as const, index: "LAST" as const } }
+      : items.length === 1
+        ? { initialItemCount: 1 }
+        : {}
   const rendererKey = [
     getIdentityKey(renderers.renderReasoning),
     getIdentityKey(renderers.renderStep),
@@ -68,6 +80,8 @@ export function MessageList({ messages }: MessageListProps) {
       computeItemKey={(_index, message) => message.id}
       data={items}
       followOutput="auto"
+      {...initialPositionProps}
+      style={listStyle}
       itemContent={(index, message) => (
         <ErrorBoundary
           fallback={<div data-slot="message-error">Message failed to render</div>}

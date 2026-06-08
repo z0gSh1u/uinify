@@ -345,6 +345,34 @@ describe("LexicalComposer", () => {
     expect(onAttachmentCancel).not.toHaveBeenCalled()
   })
 
+  it("queues selected files from the visible attachment control", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const file = new File(["image-bytes"], "selected.png", { type: "image/png" })
+
+    render(<LexicalComposer attachmentAccept="image/*" onSubmit={onSubmit} />)
+
+    const attachmentInput = screen.getByLabelText("Attach file")
+
+    expect(screen.getByRole("button", { name: "Attach" })).toBeInTheDocument()
+    expect(attachmentInput).toHaveAttribute("accept", "image/*")
+
+    await user.upload(attachmentInput, file)
+
+    expect(screen.getByText("selected.png")).toBeInTheDocument()
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    setEditorText(textbox, "Describe this selected image")
+
+    await user.click(screen.getByRole("button", { name: /send/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "Describe this selected image",
+      attachments: [expect.objectContaining({ file, name: "selected.png", status: "queued" })],
+      commands: [],
+    })
+  })
+
   it("submits pasted image attachments with fallback names when browsers omit file names", async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()

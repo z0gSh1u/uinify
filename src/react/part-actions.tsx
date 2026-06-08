@@ -70,7 +70,7 @@ export function PartActions({ message, part }: PartActionsProps) {
   const actions = getAvailablePartActions(part)
   const { onPartAction } = useChatActionHandlers()
 
-  if (actions.length === 0) {
+  if (!onPartAction || actions.length === 0) {
     return null
   }
 

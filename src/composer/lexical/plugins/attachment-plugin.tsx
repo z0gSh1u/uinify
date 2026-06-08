@@ -61,19 +61,43 @@ export function createAttachmentHandlers(
   }
 
   return {
+    addFiles(files: FileList | File[]) {
+      addAttachments(files)
+    },
     onPaste(event: ClipboardEvent<HTMLElement>) {
-      if (event.clipboardData.files.length > 0) {
+      const files = readTransferFiles(event.clipboardData)
+
+      if (files.length > 0) {
         event.preventDefault()
-        addAttachments(event.clipboardData.files)
+        addAttachments(files)
       }
     },
     onDrop(event: DragEvent<HTMLElement>) {
-      if (event.dataTransfer.files.length > 0) {
+      const files = readTransferFiles(event.dataTransfer)
+
+      if (files.length > 0) {
         event.preventDefault()
-        addAttachments(event.dataTransfer.files)
+        addAttachments(files)
       }
     },
   }
+}
+
+function readTransferFiles(source: DataTransfer | ClipboardEvent<HTMLElement>["clipboardData"]) {
+  const directFiles = Array.from(source.files ?? [])
+
+  if (directFiles.length > 0) {
+    return directFiles
+  }
+
+  return Array.from(source.items ?? []).flatMap((item) => {
+    if (item.kind !== "file") {
+      return []
+    }
+
+    const file = item.getAsFile()
+    return file ? [file] : []
+  })
 }
 
 function resolveValidatedAttachments(

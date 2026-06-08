@@ -124,6 +124,38 @@ describe("attachment-plugin", () => {
     expect(preventDefault).toHaveBeenCalledTimes(1)
   })
 
+  it("collects pasted image files from clipboard items on the first paste", () => {
+    const onAdd = vi.fn()
+    const preventDefault = vi.fn()
+    const file = new File(["image-bytes"], "screenshot.png", { type: "image/png" })
+    const handlers = createAttachmentHandlers(onAdd)
+
+    handlers.onPaste({
+      clipboardData: {
+        files: [],
+        items: [
+          {
+            kind: "file",
+            type: "image/png",
+            getAsFile: () => file,
+          },
+        ],
+      },
+      preventDefault,
+    } as never)
+
+    expect(onAdd).toHaveBeenCalledWith([
+      expect.objectContaining({
+        file,
+        name: "screenshot.png",
+        mimeType: "image/png",
+        size: file.size,
+        status: "queued",
+      }),
+    ])
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+  })
+
   it("preserves dropped image file metadata", () => {
     const onAdd = vi.fn()
     const preventDefault = vi.fn()

@@ -5,12 +5,27 @@ import { ChatRoot, MessageList } from "../../src/react"
 
 export function MultimodalTemplate() {
   const objectUrls = useRef(new Set<string>())
-  const [runtime] = useState(() => createChatRuntime({ conversationId: "template-multimodal" }))
+  const [runtime] = useState(() => {
+    const next = createChatRuntime({ conversationId: "template-multimodal" })
+
+    next.dispatch({ type: "message.started", messageId: "multimodal-assistant", role: "assistant" })
+    next.dispatch({
+      type: "part.text.delta",
+      messageId: "multimodal-assistant",
+      partId: "multimodal-assistant-text",
+      delta: "Paste or attach an image, add a prompt, and the host will map it into a transcript image part.",
+    })
+    next.dispatch({ type: "message.completed", messageId: "multimodal-assistant" })
+
+    return next
+  })
 
   useEffect(() => {
     return () => {
       for (const url of objectUrls.current) {
-        URL.revokeObjectURL(url)
+        if (typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(url)
+        }
       }
 
       objectUrls.current.clear()
@@ -59,6 +74,19 @@ export function MultimodalTemplate() {
     }
 
     runtime.dispatch({ type: "message.completed", messageId })
+
+    const assistantMessageId = `multimodal-assistant-${Date.now()}`
+
+    runtime.dispatch({ type: "message.started", messageId: assistantMessageId, role: "assistant" })
+    runtime.dispatch({
+      type: "part.text.delta",
+      messageId: assistantMessageId,
+      partId: `${assistantMessageId}-text`,
+      delta: imageAttachment
+        ? `Rendered ${imageAttachment.name} through the canonical image part contract.`
+        : "Submitted a text-only message; attach an image to exercise the multimodal path.",
+    })
+    runtime.dispatch({ type: "message.completed", messageId: assistantMessageId })
   }
 
   return (
@@ -68,7 +96,7 @@ export function MultimodalTemplate() {
       <ChatRoot runtime={runtime}>
         <MessageList />
       </ChatRoot>
-      <LexicalComposer onSubmit={handleSubmit} />
+      <LexicalComposer attachmentAccept="image/*" onSubmit={handleSubmit} />
     </section>
   )
 }

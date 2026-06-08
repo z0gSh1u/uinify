@@ -135,17 +135,17 @@ export function AgentShowcaseTemplate() {
     <section>
       <h2>Layered agent UI showcase</h2>
       <p>Commands, image input, and agent steps composed through public contracts.</p>
-      <div aria-label="Submitted command intent">
+      <div aria-label="Submitted command intent" className="example-command-chips">
         <span>@researcher</span>
         <span>mcp:browser.search</span>
       </div>
-      <section aria-label="Submitted command metadata">
-        <h3>Submitted command payload</h3>
-        <pre>{JSON.stringify(submittedCommandPayload, null, 2)}</pre>
-      </section>
       <ChatRoot runtime={runtime}>
         <MessageList />
       </ChatRoot>
+      <details className="example-details">
+        <summary>Command payload</summary>
+        <pre>{JSON.stringify(submittedCommandPayload, null, 2)}</pre>
+      </details>
     </section>
   )
 }

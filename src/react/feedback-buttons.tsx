@@ -6,6 +6,10 @@ export type FeedbackButtonsProps = {
 }
 
 export function FeedbackButtons({ value = "none", onSelect }: FeedbackButtonsProps) {
+  if (!onSelect) {
+    return null
+  }
+
   return (
     <div aria-label="Message feedback" role="group">
       <button

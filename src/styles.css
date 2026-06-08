@@ -275,6 +275,11 @@
   background: var(--uinify-color-composer-bg);
   border: 1px solid var(--uinify-color-composer-border);
   border-radius: var(--uinify-radius-md);
+  box-shadow: var(--uinify-shadow-sm);
+}
+
+[data-slot="composer-input"] {
+  position: relative;
 }
 
 [data-slot="composer-editor"] {
@@ -288,4 +293,76 @@
 
 [data-slot="composer-editor"]:focus {
   border-color: var(--uinify-color-accent-fg);
+}
+
+[data-slot="composer-placeholder"] {
+  position: absolute;
+  inset-block-start: var(--uinify-space-3);
+  inset-inline-start: var(--uinify-space-3);
+  color: var(--uinify-color-muted-fg);
+  pointer-events: none;
+}
+
+[data-slot="message-actions"] button,
+[data-slot="part-actions"] button,
+[data-slot="attachment-actions"] button,
+[data-slot="artifact-tabs"] button,
+[data-slot="composer-actions"] button {
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-slot="message-actions"] button:hover,
+[data-slot="part-actions"] button:hover,
+[data-slot="attachment-actions"] button:hover,
+[data-slot="artifact-tabs"] button:hover {
+  border-color: var(--uinify-color-accent-fg);
+  color: var(--uinify-color-accent-fg);
+}
+
+[data-slot="composer-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uinify-space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-slot="composer-attachment-input"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+[data-slot="composer-attachment-button"],
+[data-slot="composer-send-button"] {
+  min-width: 6rem;
+  padding: var(--uinify-space-2) var(--uinify-space-4);
+  border-radius: var(--uinify-radius-sm);
+  font-weight: 600;
+}
+
+[data-slot="composer-attachment-button"] {
+  color: var(--uinify-color-action-fg);
+  background: var(--uinify-color-action-bg);
+  border: 1px solid var(--uinify-color-action-border);
+}
+
+[data-slot="composer-send-button"] {
+  color: #ffffff;
+  background: var(--uinify-color-accent-fg);
+  border: 1px solid var(--uinify-color-accent-fg);
+}
+
+[data-slot="composer-actions"] button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+[data-slot="composer-actions"] button:disabled {
+  color: var(--uinify-color-muted-fg);
+  background: var(--uinify-color-muted-bg);
+  border-color: var(--uinify-color-border);
+  cursor: not-allowed;
+  filter: none;
 }

@@ -21,53 +21,15 @@ vi.mock("react-virtuoso", () => ({
 }))
 
 describe("ExamplePlayground", () => {
-  it("presents the playground as a documentation entrypoint", () => {
+  it("presents a focused two-column example browser", () => {
     render(<ExamplePlayground />)
 
-    expect(screen.getByRole("heading", { level: 1, name: "Build chat UI with uinify" })).toBeInTheDocument()
-    expect(screen.getByText("pnpm dev:example")).toBeInTheDocument()
-    expect(screen.getByText("React-first chat UI foundation for backend-agnostic LLM apps.")).toBeInTheDocument()
-
-    const checklist = screen.getByRole("region", { name: "Integration checklist" })
-    expect(within(checklist).getByText("Install package")).toBeInTheDocument()
-    expect(within(checklist).getByText("Import styles")).toBeInTheDocument()
-    expect(within(checklist).getByText("Create runtime")).toBeInTheDocument()
-    expect(within(checklist).getByText("Map events")).toBeInTheDocument()
-    expect(within(checklist).getByText("Render UI")).toBeInTheDocument()
-
-    const docsMap = screen.getByRole("navigation", { name: "Docs map" })
-    expect(within(docsMap).getByRole("link", { name: "Getting Started" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("getting-started"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Core Concepts" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("core-concepts"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Stream Mapping" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("stream-mapping"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "SSE" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("sse"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Composer" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("composer-lexical"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Layered API" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("layered-public-api"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Agent Steps" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("agent-steps"),
-    )
-    expect(within(docsMap).getByRole("link", { name: "Styling" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("theming"),
-    )
+    expect(screen.getByRole("heading", { level: 1, name: "uinify examples" })).toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Example templates" })).toBeInTheDocument()
+    expect(screen.getByRole("region", { name: "Selected template preview" })).toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "Integration checklist" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("navigation", { name: "Docs map" })).not.toBeInTheDocument()
+    expect(screen.queryByText("pnpm dev:example")).not.toBeInTheDocument()
   })
 
   it("shows one selected template preview at a time", async () => {
@@ -126,7 +88,7 @@ describe("ExamplePlayground", () => {
     )
     expect(within(showcasePreview).getByRole("heading", { level: 2, name: "Layered agent UI showcase" })).toBeInTheDocument()
     expect(within(showcasePreview).getByText("@researcher")).toBeInTheDocument()
-    expect(within(showcasePreview).getByText("Submitted command payload")).toBeInTheDocument()
+    expect(within(showcasePreview).getByText("Command payload")).toBeInTheDocument()
     expect(within(showcasePreview).getByText(/"id": "agent-research"/)).toBeInTheDocument()
     expect(within(showcasePreview).getByText("Selected command metadata: agent=researcher, mcp=browser.search")).toBeInTheDocument()
     expect(within(showcasePreview).getByRole("img", { name: "Uploaded product sketch" })).toBeInTheDocument()

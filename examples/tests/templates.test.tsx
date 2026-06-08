@@ -62,6 +62,22 @@ describe("example templates", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Layered agent UI showcase" })).toBeInTheDocument()
   })
 
+  it("renders the minimal template as an interactive chat shell", async () => {
+    const user = userEvent.setup()
+
+    render(<MinimalAppTemplate />)
+
+    expect(screen.getByText("Show the smallest uinify chat shell.")).toBeInTheDocument()
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+    setEditorText(textbox, "Hello minimal chat")
+
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    expect(await screen.findByText("Hello minimal chat")).toBeInTheDocument()
+    expect(await screen.findByText(/Received host-owned turn: Hello minimal chat/i)).toBeInTheDocument()
+  })
+
   it("renders a submitted image attachment as a user image part", async () => {
     const user = userEvent.setup()
     const file = new File(["image-bytes"], "diagram.png", { type: "image/png" })
@@ -103,14 +119,66 @@ describe("example templates", () => {
     }
   })
 
-  it("shows adapter diagnostics alongside normalized output", () => {
-    render(<AdapterTemplate />)
+  it("queues clipboard item images on the first multimodal paste", async () => {
+    const user = userEvent.setup()
+    const file = new File(["image-bytes"], "clipboard-shot.png", { type: "image/png" })
+    const originalCreateObjectURL = URL.createObjectURL
+    const createObjectURL = vi.fn(() => "blob:clipboard-shot")
 
-    expect(screen.getByText(/Adapter-mapped host events/i)).toBeInTheDocument()
-    expect(screen.getByText(/No adapter diagnostics for this transcript\./i)).toBeInTheDocument()
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL })
+
+    try {
+      render(<MultimodalTemplate />)
+
+      const textbox = screen.getByRole("textbox", { name: "Message" })
+      fireEvent.paste(textbox, {
+        clipboardData: {
+          files: [],
+          items: [
+            {
+              kind: "file",
+              type: "image/png",
+              getAsFile: () => file,
+            },
+          ],
+          types: ["Files"],
+        },
+      })
+
+      expect(screen.getByText("clipboard-shot.png")).toBeInTheDocument()
+
+      setEditorText(textbox, "Describe this clipboard image")
+      await user.click(screen.getByRole("button", { name: /send/i }))
+
+      expect(await screen.findByRole("img", { name: "clipboard-shot.png" })).toBeInTheDocument()
+      expect(createObjectURL).toHaveBeenCalledWith(file)
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL })
+    }
   })
 
-  it("keeps upload orchestration on the public composer contract with file-backed attachments", () => {
+  it("hides adapter diagnostics when the normalized output has no warnings", () => {
+    render(<AdapterTemplate />)
+
+    expect(screen.getByRole("heading", { level: 2, name: "Adapter integration template" })).toBeInTheDocument()
+    expect(screen.getByText(/Adapter-mapped host events/i)).toBeInTheDocument()
+    expect(screen.queryByText(/No adapter diagnostics for this transcript\./i)).not.toBeInTheDocument()
+  })
+
+  it("renders adapter input events alongside the normalized transcript", () => {
+    render(<AdapterTemplate />)
+
+    expect(screen.getByRole("list", { name: "Host events" })).toBeInTheDocument()
+    expect(screen.getByText("host.user")).toBeInTheDocument()
+    expect(screen.getByText("host.tool.finished")).toBeInTheDocument()
+    expect(screen.getAllByText("Run the release-note adapter over the uploaded changelog.")).toHaveLength(2)
+    expect(screen.getByText("Normalize host event")).toBeInTheDocument()
+    expect(screen.getAllByText(/Mapped host events into uinify transcript events/i)).toHaveLength(2)
+  })
+
+  it("keeps upload orchestration on the public composer contract with file-backed attachments", async () => {
+    const user = userEvent.setup()
+
     render(<UploadTemplate />)
 
     expect(screen.getByText(/Controlled attachments keep upload progression in host-owned state\./i)).toBeInTheDocument()
@@ -120,6 +188,15 @@ describe("example templates", () => {
       "data-send-blocked-reason",
       "attachments-uploading",
     )
+
+    await user.click(screen.getByRole("button", { name: "Complete upload" }))
+
+    expect(screen.getByText("100% uploaded")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Send" })).not.toHaveAttribute("data-send-blocked-reason")
+
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    expect(screen.getByRole("status")).toHaveTextContent("1 attachment submitted")
   })
 
   it("composes command intent, image input, and agent steps in the showcase", () => {
@@ -128,7 +205,7 @@ describe("example templates", () => {
     expect(screen.getByText(/Commands, image input, and agent steps composed through public contracts\./i)).toBeInTheDocument()
     expect(screen.getByText("@researcher")).toBeInTheDocument()
     expect(screen.getByText("mcp:browser.search")).toBeInTheDocument()
-    expect(screen.getByText("Submitted command payload")).toBeInTheDocument()
+    expect(screen.getByText("Command payload")).toBeInTheDocument()
     expect(screen.getByText(/"id": "agent-research"/)).toBeInTheDocument()
     expect(screen.getByText(/"kind": "agent"/)).toBeInTheDocument()
     expect(screen.getByText(/"server": "browser"/)).toBeInTheDocument()
@@ -147,5 +224,7 @@ describe("example templates", () => {
     expect(screen.getByText(/Artifact registry overrides customize rendering/i)).toBeInTheDocument()
     expect(screen.getByText("const customized = true")).toBeInTheDocument()
     expect(screen.getByText(/part id: artifact-part/i)).toBeInTheDocument()
+    expect(screen.getByText("TypeScript")).toBeInTheDocument()
+    expect(screen.getByText("custom registry")).toBeInTheDocument()
   })
 })
