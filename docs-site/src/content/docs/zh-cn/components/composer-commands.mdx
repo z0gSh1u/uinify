@@ -1,0 +1,102 @@
+---
+title: Composer 命令
+description: 用同一个 command model 表达 slash commands、mentions、agents、MCP tools、skills 和自定义输入意图。
+---
+
+Composer commands 是结构化输入意图。它们不是执行结果、工具输出，也不会自动发起后端调用。
+
+## 规则
+
+Commands 描述用户在 submit 前选择了什么。Submit 之后执行什么，由宿主代码决定。
+
+## Command 形状
+
+```ts
+type UiComposerCommand = {
+  id: string
+  kind: "slash" | "mention" | "agent" | "tool" | "skill" | "mcp" | "custom"
+  label: string
+  insertText: string
+  trigger?: "/" | "@"
+  description?: string
+  group?: string
+  disabledReason?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## 示例
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  commands={[
+    {
+      id: "agent-research",
+      kind: "agent",
+      label: "Researcher",
+      insertText: "@researcher ",
+      trigger: "@",
+      description: "Route the next prompt to the research agent.",
+      metadata: { agentId: "researcher" },
+    },
+    {
+      id: "mcp-browser-search",
+      kind: "mcp",
+      label: "browser.search",
+      insertText: "/browser.search ",
+      trigger: "/",
+      description: "Ask the host to invoke an MCP browser search tool.",
+      metadata: { server: "browser", tool: "search" },
+    },
+    {
+      id: "skill-product-writing",
+      kind: "skill",
+      label: "Product writing",
+      insertText: "/product-writing ",
+      trigger: "/",
+    },
+  ]}
+  onSubmit={(value) => {
+    for (const command of value.commands) {
+      console.log(command.id, command.kind, command.metadata)
+    }
+  }}
+/>
+```
+
+## Submit Values
+
+Submit values 会包含结构化的 selected commands。不要只依赖解析最终文本。
+
+```ts
+type UiComposerCommandSelection = {
+  id: string
+  kind: "slash" | "mention" | "agent" | "tool" | "skill" | "mcp" | "custom"
+  label: string
+  insertText: string
+  trigger: "/" | "@"
+  range: { start: number; end: number }
+  description?: string
+  group?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## Disabled Commands
+
+当宿主知道某个 command 不能被选择时，使用 `disabledReason`。
+
+```ts
+const command = {
+  id: "mcp-browser-search",
+  kind: "mcp",
+  label: "browser.search",
+  insertText: "/browser.search ",
+  trigger: "/",
+  disabledReason: "Connect the browser MCP server first.",
+} satisfies UiComposerCommand
+```
+
+Command menu 可以展示这个原因，但 Uinify 仍然不会验证 agents、skills、MCP servers 或 tools 是否真实存在。

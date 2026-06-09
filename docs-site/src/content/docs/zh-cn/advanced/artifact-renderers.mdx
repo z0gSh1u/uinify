@@ -1,0 +1,93 @@
+---
+title: Artifact 渲染器
+description: 通过 registry overrides 定制 artifact parts 的渲染方式。
+---
+
+请在阅读 [核心概念](/zh-cn/guides/core-concepts/) 和 [示例](/zh-cn/guides/examples/) 后再看本页。Artifacts 是 message parts，包含一个 typed container shape 和一个或多个可渲染的 `views`。当前模型是 `UiArtifactPart`，它包装了一个 `UiArtifact`，其中包括：
+
+对应的示例模板在 `examples/templates/artifact-template.tsx`。
+
+- `kind`：宿主定义的 artifact 类别，例如 `code`、`image` 或另一个领域特定 key。
+- `title` 和 `metadata`：可选展示元数据。
+- `defaultViewId`：可选的首选初始 view。
+- `views`：artifact 的实际渲染目标。
+
+`views` 中的每个条目都是一个 `UiArtifactView`，包含 `id`、`label`、`kind`、可选 `language` 和一个 `value`。内置 container 会渲染 view switch buttons，优先选择 `defaultViewId`，没有时回退到第一个 view。
+
+## Registry Override 模式
+
+React renderer surface 通过 `RenderersProvider` 暴露 artifact customization。
+
+- `artifactRegistry` 把 `artifact.kind` 映射到自定义 renderer。
+- `renderArtifactFallback` 处理没有 keyed registry entry 的 artifact kinds。
+
+解析顺序是：
+
+1. 在 `artifactRegistry` 中查找 artifact kind。
+2. 如果没有 keyed renderer，并且提供了 `renderArtifactFallback`，就调用它。
+3. 如果两种 override 都没有，使用默认 artifact body renderer。
+
+这个模式可以保留内置 `ArtifactContainer` shell 和 view switching，只替换特定 artifact kinds 的 body rendering。
+
+## 内置默认值
+
+没有 registry overrides 时，默认 artifact body renderer 会为这些 artifact kinds 提供更强的内置处理：
+
+- `code`：渲染为面向代码输出的 `<pre><code>` block。
+- `text`：string-valued views 渲染为可读纯文本，并保留换行。
+- `json`：当 view value 是结构化数据或合法 JSON 文本时，渲染为格式化 JSON。
+
+不匹配 keyed registry renderer 且没有 `renderArtifactFallback` override 的 artifact kinds，仍然会通过共享默认 fallback path 保持可读。Source views 仍会渲染在 `<pre><code>` block 中，其他未匹配 views 渲染在通用 `<pre>` body 中。
+
+Container fallback 行为默认也稳定：
+
+- 没有 `views` 的 artifacts 会显示 `No artifact views are available.`，而不是渲染空内容
+
+这些 container states 和 registry overrides 是分开的。自定义 `artifactRegistry` entry 或 `renderArtifactFallback` 会替换有内容 views 的 body rendering path，但内置 container 仍会处理 view selection、headings 和 no-views empty state。
+
+## 示例
+
+```tsx
+import {
+  ArtifactContainer,
+  RenderersProvider,
+  type ArtifactRendererProps,
+} from "uinify/react"
+import type { UiArtifactPart } from "uinify"
+
+function CodeArtifactRenderer({ artifact, view }: ArtifactRendererProps) {
+  return (
+    <section>
+      <h3>{artifact.title ?? "Code artifact"}</h3>
+      <pre>
+        <code>{typeof view.value === "string" ? view.value : JSON.stringify(view.value, null, 2)}</code>
+      </pre>
+    </section>
+  )
+}
+
+function UnknownArtifactRenderer({ artifact, view }: ArtifactRendererProps) {
+  return (
+    <pre>
+      {artifact.kind}: {typeof view.value === "string" ? view.value : JSON.stringify(view.value, null, 2)}
+    </pre>
+  )
+}
+
+export function ArtifactExample({ part }: { part: UiArtifactPart }) {
+  return (
+    <RenderersProvider
+      value={{
+        artifactRegistry: {
+          code: CodeArtifactRenderer,
+        },
+        renderArtifactFallback: UnknownArtifactRenderer,
+      }}
+    >
+      <ArtifactContainer part={part} />
+    </RenderersProvider>
+  )
+}
+```
+
+当你对已知 `kind` 有稳定 renderer 时，使用 `artifactRegistry`。当你想给暂时不值得拥有独立 keyed renderer 的宿主自定义 artifacts 提供 catch-all path 时，使用 `renderArtifactFallback`。

@@ -1,0 +1,34 @@
+---
+title: 主题
+description: 覆盖 CSS custom properties，让组件匹配你的应用视觉风格。
+---
+
+先引入一次 `uinify/styles.css`，再在你的应用样式表中覆盖暴露的 `--uinify-*` CSS custom properties。
+
+## 推荐模式
+
+```css
+:root {
+  --uinify-color-bg: #0f172a;
+  --uinify-color-fg: #e5e7eb;
+  --uinify-color-accent: #7c3aed;
+}
+```
+
+当 Chat UI 需要继承某个局部主题时，你也可以把覆盖 scope 到页面的一部分，而不是放在 `:root`：
+
+```css
+.support-chat {
+  --uinify-color-bg: #111827;
+  --uinify-color-fg: #f9fafb;
+}
+```
+
+## 实用顺序
+
+1. 引入基础 stylesheet。
+2. 覆盖 color、spacing、radius 和 typography tokens。
+3. 当特定区域需要精确规则时，使用已文档化的 slots。
+4. 只有当产品形状本身必须变化时，才替换 renderers。
+
+长期稳定的 styling hooks 请结合 [稳定 Slots](/zh-cn/styling/slots/) 一起使用。

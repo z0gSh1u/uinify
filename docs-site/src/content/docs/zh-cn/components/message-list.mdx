@@ -1,0 +1,34 @@
+---
+title: MessageList
+description: 来自 uinify/react 的默认 transcript renderer。
+---
+
+`MessageList` 是 `uinify/react` 提供的默认 transcript renderer。
+
+## 基本用法
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot runtime={runtime}>
+  <MessageList />
+</ChatRoot>
+```
+
+`ChatRoot` 提供 runtime state 和共享 rendering context。`MessageList` 读取这个 context，并按顺序渲染对话。
+
+## 默认能力
+
+- 渲染 assistant 和 user messages 的 transcript
+- 内置渲染 text、reasoning、以 `step` transcript output 表示的 agent/tool execution、artifact、image 和 attachment parts
+- 当对应 handler 通过 `ChatRoot` 提供时，展示 action surfaces
+
+## 何时定制
+
+在替换 transcript shell 之前，先从 styling 和 renderer overrides 开始。
+
+- 用 [主题](/zh-cn/styling/theming/) 调整颜色、间距等 tokens。
+- 用 [稳定 Slots](/zh-cn/styling/slots/) 使用持久 selectors 和 `slotClassNames` keys。
+- 当特定 transcript output 需要自定义展示时，使用 `renderStep`、image renderers、artifact renderers 以及组件文档。
+
+如果你是第一次接入 `uinify`，请保留 `MessageList`，把集成工作放到事件映射和宿主 callbacks 上。

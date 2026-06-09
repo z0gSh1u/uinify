@@ -8,6 +8,17 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "uinify",
+      defaultLocale: "root",
+      locales: {
+        root: {
+          label: "English",
+          lang: "en",
+        },
+        "zh-cn": {
+          label: "简体中文",
+          lang: "zh-CN",
+        },
+      },
       social: [
         {
           icon: "github",
@@ -16,9 +27,14 @@ export default defineConfig({
         },
       ],
       sidebar: [
-        { label: "Getting Started", slug: "getting-started" },
+        {
+          label: "Getting Started",
+          translations: { "zh-CN": "入门" },
+          slug: "getting-started",
+        },
         {
           label: "Guides",
+          translations: { "zh-CN": "指南" },
           items: [
             { slug: "guides/core-concepts" },
             { slug: "guides/layered-public-api" },
@@ -27,6 +43,7 @@ export default defineConfig({
         },
         {
           label: "Integration",
+          translations: { "zh-CN": "集成" },
           items: [
             { slug: "integration/stream-mapping" },
             { slug: "integration/agent-steps" },
@@ -37,6 +54,7 @@ export default defineConfig({
         },
         {
           label: "Components",
+          translations: { "zh-CN": "组件" },
           items: [
             { slug: "components/message-list" },
             { slug: "components/step-block" },
@@ -46,10 +64,12 @@ export default defineConfig({
         },
         {
           label: "Styling",
+          translations: { "zh-CN": "样式" },
           items: [{ slug: "styling/theming" }, { slug: "styling/slots" }],
         },
         {
           label: "Advanced",
+          translations: { "zh-CN": "进阶" },
           items: [
             { slug: "advanced/artifact-renderers" },
             { slug: "advanced/stability" },

@@ -1,0 +1,57 @@
+---
+title: 核心概念
+description: uinify 背后的 runtime、事件模型和渲染架构。
+---
+
+可以把 `uinify` 理解成一组小而明确的职责：
+
+- 你的应用负责 transport、auth、uploads 和供应商特定 payload
+- `UiStreamEvent` 是宿主集成和组件库之间的交接格式
+- `createChatRuntime` 保存规范化的消息状态
+- `ChatRoot` 和 `MessageList` 渲染这些状态
+
+## Runtime 形状
+
+推荐的接入面仍然很窄：
+
+- `createChatRuntime` 用来保存 transcript state
+- `UiStreamEvent` 用来描述 message 和 part 更新
+- `ChatRoot` 与 `MessageList` 用来渲染 transcript
+
+这样你就有一个明确的位置在 UI 代码接触数据前规范化后端事件。
+
+## 事件流
+
+多数集成都会遵循同一个循环：
+
+```ts
+import { createChatRuntime, type UiStreamEvent } from "uinify"
+
+const runtime = createChatRuntime({ conversationId: "demo" })
+
+function dispatchEvents(events: UiStreamEvent[]) {
+  for (const event of events) {
+    runtime.dispatch(event)
+  }
+}
+```
+
+最重要的规则是顺序：任何属于某条消息的 part event 都必须出现在这条消息的 `message.started` 之后。
+
+## 渲染模型
+
+`ChatRoot` 提供 runtime state 和渲染 hooks。`MessageList` 提供默认 transcript UI。先从它开始，再逐步替换 renderer 或构建自定义外壳。
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot runtime={runtime}>
+  <MessageList />
+</ChatRoot>
+```
+
+## 下一步
+
+- 第一次集成请看 [快速开始](/zh-cn/getting-started/)。
+- 传输协议映射请看 [流映射](/zh-cn/integration/stream-mapping/)。
+- 具体模板请看 [示例](/zh-cn/guides/examples/)。

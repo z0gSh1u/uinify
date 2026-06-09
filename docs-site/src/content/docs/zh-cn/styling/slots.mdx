@@ -1,0 +1,39 @@
+---
+title: 稳定 Slots
+description: 用持久的 data-slot 区域和 slotClassNames 做精确样式定制。
+---
+
+`uinify` 暴露稳定的 `data-slot` 区域，以及匹配的 `slotClassNames` keys。宿主可以基于这些 hooks 做样式定制，而不必依赖偶然的 DOM 嵌套。
+
+## 常见 Slots
+
+- `message`
+- `message-parts`
+- `message-actions`
+- `part-actions`
+- `artifact-container`
+- `artifact-tabs`
+- `artifact-views`
+- `attachment-tray`
+- `attachment-actions`
+- `attachment-part`
+
+## 实用方式
+
+当 token-level theming 不够具体时，使用 slots：
+
+```css
+[data-slot="message-actions"] {
+  justify-content: flex-end;
+}
+
+[data-slot="artifact-tabs"] {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+```
+
+如果你传入 `slotClassNames`，请让名字和文档化的 slot keys 保持一致，而不是再发明一套 selector contract。
+
+## 建议
+
+把文档化 slots 当作稳定 styling API。当同一区域已经有 slot 时，避免使用依赖内部 wrapper 深度的 selectors。

@@ -1,0 +1,63 @@
+---
+title: SSE 集成
+description: 从 Server-Sent Events 读取 payload，并映射成 UiStreamEvent。
+---
+
+`uinify/sse` 提供轻量 SSE 读取 helpers。它们只负责读取 stream，不会定义你的后端协议。
+
+## 规则
+
+把 SSE payload 映射成 `UiStreamEvent` 后再派发到 runtime。不要把原始 SSE payload 放进 transcript state。
+
+## 读取 SSE
+
+```ts
+import { readSSEStream } from "uinify/sse"
+import type { UiStreamEvent } from "uinify"
+
+async function runStream(response: Response) {
+  for await (const payload of readSSEStream(response.body)) {
+    for (const event of mapSsePayload(payload)) {
+      runtime.dispatch(event)
+    }
+  }
+}
+
+function mapSsePayload(payload: unknown): UiStreamEvent[] {
+  if (!payload || typeof payload !== "object") {
+    return []
+  }
+
+  const event = payload as { type?: string; id?: string; text?: string }
+
+  if (event.type === "text" && event.id && event.text) {
+    return [
+      {
+        type: "part.text.delta",
+        messageId: event.id,
+        partId: `${event.id}-text`,
+        delta: event.text,
+      },
+    ]
+  }
+
+  return []
+}
+```
+
+## 创建 SSE Stream
+
+当你需要把 iterable payloads 暴露成 SSE response body 时，可以使用 `createSSEStream`。
+
+```ts
+import { createSSEStream } from "uinify/sse"
+
+const stream = createSSEStream([
+  { type: "message", id: "m1" },
+  { type: "done", id: "m1" },
+])
+```
+
+## 边界
+
+SSE helpers 不会处理 auth、retry policy、模型调用或供应商协议。把这些逻辑留在宿主应用或 adapter 中，然后只把规范化 `UiStreamEvent` 派发给 runtime。

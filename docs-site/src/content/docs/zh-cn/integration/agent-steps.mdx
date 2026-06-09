@@ -1,0 +1,119 @@
+---
+title: Agent 步骤
+description: 将 agent 执行过程，包括工具调用，表示为规范化 transcript steps。
+---
+
+Agent work 会表示成 `step` message parts。工具调用是一个 `category: "tool"` 的 step，而不是单独的 canonical tool call model。
+
+## 规则
+
+把 tools、retrieval、handoffs、planners、workflows、skills 和 custom execution nodes 都映射成 `step` parts。工具调用使用 `category: "tool"`。
+
+## Step Part 形状
+
+```ts
+type UiStepPart = {
+  id: string
+  kind: "step"
+  category: "tool" | "retrieval" | "handoff" | "planner" | "workflow" | "skill" | "custom"
+  status: "pending" | "running" | "complete" | "error"
+  label: string
+  summary?: string
+  inputSummary?: string
+  outputSummary?: string
+  error?: string
+  startedAt?: string
+  completedAt?: string
+  metadata?: Record<string, unknown>
+}
+```
+
+## Step Events
+
+用 step lifecycle events 通过 `messageId` 和 `partId` 更新同一个 part。
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+export const stepEvents: UiStreamEvent[] = [
+  { type: "message.started", messageId: "assistant-1", role: "assistant" },
+  {
+    type: "part.step.started",
+    messageId: "assistant-1",
+    partId: "search-step",
+    category: "tool",
+    label: "Search docs",
+    inputSummary: "query: agent steps",
+  },
+  {
+    type: "part.step.completed",
+    messageId: "assistant-1",
+    partId: "search-step",
+    outputSummary: "Found the Agent Steps guide.",
+  },
+  { type: "message.completed", messageId: "assistant-1" },
+]
+```
+
+使用 `part.step.updated` 表达部分进度，使用 `part.step.failed` 表达可恢复的 step 错误。
+
+```ts
+const failedToolStep: UiStreamEvent[] = [
+  {
+    type: "part.step.started",
+    messageId: "assistant-1",
+    partId: "browser-step",
+    category: "tool",
+    label: "browser.search",
+    inputSummary: "query: release notes",
+  },
+  {
+    type: "part.step.failed",
+    messageId: "assistant-1",
+    partId: "browser-step",
+    error: "Search backend unavailable",
+    outputSummary: "No search results were returned.",
+  },
+]
+```
+
+## 映射建议
+
+在 adapter 边界把宿主工具协议映射成 step events。不要把供应商特定的 tool payloads 放进 transcript state。
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+type HostToolEvent = {
+  messageId: string
+  toolCallId: string
+  name: string
+  input: string
+  output?: string
+}
+
+export function mapToolCompleted(event: HostToolEvent): UiStreamEvent[] {
+  return [
+    {
+      type: "part.step.started",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      category: "tool",
+      label: event.name,
+      inputSummary: event.input,
+    },
+    {
+      type: "part.step.completed",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      outputSummary: event.output,
+    },
+  ]
+}
+```
+
+## 错误处理
+
+失败的 step 是 UI state。当某个工具或 retrieval node 失败，但 assistant message 仍然可以继续时，用 `part.step.failed` 进入 `status: "error"`。
+
+只有整条 assistant message 失败时，才使用 `message.failed`。

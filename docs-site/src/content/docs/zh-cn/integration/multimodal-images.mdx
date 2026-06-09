@@ -1,0 +1,79 @@
+---
+title: 多模态图片
+description: 将宿主负责的图片上传映射成规范化 transcript image parts。
+---
+
+图片是 transcript message parts。上传、校验、object URLs、remote URLs、取消和清理都仍然由宿主应用负责。
+
+## 规则
+
+用 composer 收集图片附件。用宿主代码上传图片或创建本地 URL。然后派发 `part.image.emitted`，在 transcript 中渲染 image part。
+
+## Composer Submit
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  onSubmit={(value) => {
+    const imageAttachment = value.attachments.find((attachment) => attachment.mimeType.startsWith("image/"))
+
+    if (!imageAttachment) {
+      return
+    }
+
+    const url = URL.createObjectURL(imageAttachment.file)
+    console.log(url, imageAttachment.name)
+  }}
+/>
+```
+
+## Transcript Image Event
+
+宿主拥有可展示 URL 后，派发一个 image part。
+事件里的 `partId` 会成为 image part 的 `id`；runtime 会补上 `kind: "image"`。
+
+```ts
+runtime.dispatch({ type: "message.started", messageId: "user-1", role: "user" })
+runtime.dispatch({
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: {
+    url: "https://cdn.example.com/uploads/sketch.png",
+    alt: "Uploaded sketch",
+    mimeType: "image/png",
+    width: 640,
+    height: 480,
+    sourceAttachmentId: "attachment-1",
+  },
+})
+runtime.dispatch({ type: "message.completed", messageId: "user-1" })
+```
+
+## 边界
+
+Uinify 不会为宿主上传文件、存储 blobs、校验文件策略、调用模型或 revoke object URLs。
+
+如果宿主代码使用 `URL.createObjectURL`，不要在 dispatch 之后立刻 revoke。请在已渲染图片被移除或组件卸载时 revoke。
+
+```ts
+const url = URL.createObjectURL(file)
+const activeObjectUrls = new Set<string>()
+activeObjectUrls.add(url)
+
+runtime.dispatch({
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: { url, alt: file.name, mimeType: file.type },
+})
+
+// Later, when the rendered image is removed or the component unmounts:
+for (const activeUrl of activeObjectUrls) {
+  URL.revokeObjectURL(activeUrl)
+}
+activeObjectUrls.clear()
+```
+
+选择、校验、上传进度、重试和取消使用 attachment lifecycle state。image parts 只用于 transcript rendering。

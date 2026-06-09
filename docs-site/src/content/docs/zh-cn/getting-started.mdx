@@ -1,0 +1,71 @@
+---
+title: 快速开始
+description: 从最小可用配置开始，安装、创建 runtime、派发事件并渲染消息。
+---
+
+从最小可用配置开始：安装包，创建 runtime，把规范化的流事件派发进去，然后用 `ChatRoot` 和 `MessageList` 渲染消息。
+
+对应的示例模板在 `examples/templates/minimal-app.tsx`。
+
+首次接入时，推荐在应用入口附近引入一次 `uinify/styles.css`。
+
+## 安装
+
+```bash
+pnpm add uinify react react-dom
+```
+
+## 最小配置
+
+```tsx
+import { useEffect, useState } from "react"
+import { createChatRuntime } from "uinify"
+import { ChatRoot, MessageList } from "uinify/react"
+import "uinify/styles.css"
+
+export function App() {
+  const [runtime] = useState(() => createChatRuntime({ conversationId: "demo" }))
+
+  useEffect(() => {
+    runtime.dispatch({
+      type: "message.started",
+      messageId: "m1",
+      role: "assistant",
+    })
+
+    runtime.dispatch({
+      type: "part.text.delta",
+      messageId: "m1",
+      partId: "p1",
+      delta: "Hello from uinify.",
+    })
+
+    runtime.dispatch({
+      type: "message.completed",
+      messageId: "m1",
+    })
+  }, [runtime])
+
+  return (
+    <ChatRoot runtime={runtime}>
+      <MessageList />
+    </ChatRoot>
+  )
+}
+```
+
+## 稳定接入面
+
+首次接入时，请把集成重点放在 `createChatRuntime`、`UiStreamEvent`、`ChatRoot` 和 `MessageList` 上。只有当产品需要 agent 步骤或结构化输入意图时，再加入 `StepBlock`、`renderStep`、`LexicalComposer` 和 composer commands。
+
+## 下一步
+
+- 阅读 [核心概念](/zh-cn/guides/core-concepts/) 理解 runtime 和事件模型。
+- 阅读 [分层公开 API](/zh-cn/guides/layered-public-api/) 选择 core、transcript、composer、adapter 或 theme 层。
+- 当后端会发出工具调用或 agent 执行进度时，阅读 [Agent 步骤](/zh-cn/integration/agent-steps/)。
+- 当输入框需要 slash commands、mentions、agents、MCP tools 或 skills 时，阅读 [Composer 命令](/zh-cn/components/composer-commands/)。
+- 当图片附件需要成为 transcript image parts 时，阅读 [多模态图片](/zh-cn/integration/multimodal-images/)。
+- 阅读 [示例](/zh-cn/guides/examples/) 获取可复制模板。
+- 当你的后端已经有自己的事件协议时，阅读 [流映射](/zh-cn/integration/stream-mapping/)。
+- 当传输层是 Server-Sent Events 时，阅读 [SSE 集成](/zh-cn/integration/sse/)。
+- 当 composer 需要由宿主应用管理上传时，阅读 [上传生命周期](/zh-cn/integration/upload-lifecycle/)。

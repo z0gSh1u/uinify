@@ -1,0 +1,43 @@
+---
+title: 稳定性指南
+description: 哪些 surface 适合稳定接入，哪些只适合作为参考。
+---
+
+本页区分适合接入的 surface，以及适合学习当前实现的参考 surface。请在阅读 [快速开始](/zh-cn/getting-started/) 和 [核心概念](/zh-cn/guides/core-concepts/) 后再看本页，这样这里的稳定 surface 会有实践语境。
+
+## 推荐 Surface
+
+优先基于能解决问题的最窄稳定 surface 构建集成：
+
+- Core runtime entry points，例如 `createChatRuntime`、规范化 `UiStreamEvent` mapping、`UiMessagePart`、`UiStepPart`、`UiImagePart` 和 `UiComposerCommand`。
+- 包根入口导出的 `createAdapterRunner`，作为默认稳定 adapter entry point。
+- React transcript entry points，例如 `ChatRoot`、`MessageList`、`Message`、`MessagePart`、`StepBlock` 和 `ImagePart`。
+- Renderer override seams，例如 `renderStep`、`renderImage`、`renderReasoning` 和 artifact registry hooks。
+- Composer entry points，例如 `LexicalComposer`、结构化 command selections 和宿主拥有的 attachment submit values。
+- `uinify/styles.css` 中的 styling hooks、稳定 `data-slot` 区域和 `slotClassNames`。
+
+这是推荐 surface，因为它匹配公开 exports 和由 docs 支撑的 integration patterns。
+
+`createAdapterResult` 和 `validateAdapterEvents` 也是包根入口的一部分，但它们是用于自定义 adapter wrappers 的低层 helpers，而不是默认接入路径。
+
+## 稳定 Styling Hooks
+
+做 styling 和 theming 时，请按这个顺序优先使用文档化 hooks：
+
+- `uinify/styles.css` 中 `--uinify-*` 命名空间下的 CSS custom properties
+- 稳定 `data-slot` 区域，例如 `message`、`message-parts`、`message-actions`、`part-actions`、`step`、`step-header`、`step-category`、`step-status`、`image`、`artifact-container`、`artifact-tabs`、`artifact-views`、`attachment-tray`、`attachment-actions` 和 `attachment-part`
+- 直接映射到这些文档化稳定区域的 `slotClassNames` keys
+
+优先 tokens，然后稳定 slots 和 `slotClassNames`。只有当默认结构本身不适合产品形状，而不只是视觉处理不对时，才替换 renderers。
+
+Commands 是稳定的 composer input intent。Steps 是稳定的 transcript output。不要把 command selections 文档化成 tool execution results，也不要把 tools 文档化成单独的 canonical tool call transcript part。
+
+## 仅供参考 Surface
+
+仓库中的一些代码很适合作为参考，但不应该被当成稳定 integration contract。
+
+- `examples/adapters/` 下的文件都是 reference-only examples。
+- `custom-minimal`、`agent-like` 和 `openai-like` 等示例 adapters 展示的是如何使用稳定 adapter helpers，它们本身不是受支持的兼容层。
+- 当前 renderer shells 和 examples 背后的内部实现细节，可能会随着 package 增加更多官方 docs 和 extension points 而演进。
+
+可以用 reference-only surface 理解模式、命名和取舍。不要像依赖 versioned APIs 一样，把生产集成耦合到这些文件上。

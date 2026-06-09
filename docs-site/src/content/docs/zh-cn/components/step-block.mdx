@@ -1,0 +1,67 @@
+---
+title: StepBlock
+description: 默认渲染 agent steps，并在不替换 MessageList 的情况下覆盖 step 渲染。
+---
+
+`StepBlock` 是 `UiStepPart` 的默认 React renderer。它用稳定 slots 渲染 category、status、label、summaries 和 errors。
+
+## 规则
+
+在替换 `MessageList` 之前先使用 `renderStep`。只有当整个 transcript layout 都不适合你的产品时，才替换 `MessageList`。
+
+## 默认渲染
+
+```tsx
+import { StepBlock } from "uinify/react"
+
+<StepBlock
+  part={{
+    id: "search-step",
+    kind: "step",
+    category: "tool",
+    status: "complete",
+    label: "Search docs",
+    inputSummary: "query: streaming",
+    outputSummary: "Found the stream mapping page.",
+  }}
+/>
+```
+
+## 覆盖一层
+
+通过 `ChatRoot` renderers 覆盖 step 渲染。这会保留 virtualization、message actions、error boundaries 和 transcript shell 的其他部分。
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot
+  runtime={runtime}
+  renderers={{
+    renderStep: ({ part }) => (
+      <section data-slot="step" data-state={part.status} data-category={part.category}>
+        <strong>{part.label}</strong>
+        {part.outputSummary ? <p>{part.outputSummary}</p> : null}
+      </section>
+    ),
+  }}
+>
+  <MessageList />
+</ChatRoot>
+```
+
+## 稳定 Slots
+
+默认 renderer 暴露这些稳定区域供 styling 使用：
+
+- `data-slot="step"`
+- `data-slot="step-header"`
+- `data-slot="step-title"`
+- `data-slot="step-badges"`
+- `data-slot="step-category"`
+- `data-slot="step-status"`
+- `data-slot="step-summary"`
+- `data-slot="step-input"`
+- `data-slot="step-output"`
+- `data-slot="step-error"`
+
+优先使用 CSS tokens 和 slots。当你需要从 React 给 step slot 挂 class 时，使用 `slotClassNames.step`。

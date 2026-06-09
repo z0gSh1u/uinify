@@ -1,0 +1,55 @@
+---
+title: Lexical Composer
+description: 默认 rich composer surface，支持文本输入和宿主受控附件。
+---
+
+`uinify/composer/lexical` 提供默认 rich composer surface，用于文本输入、宿主受控附件和 commands。
+
+## 主要导出
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+```
+
+把它作为受控组件接入应用的提交流程：
+
+```tsx
+import { useState } from "react"
+import type { UiComposerAttachment, UiComposerValue } from "uinify"
+import { LexicalComposer } from "uinify/composer/lexical"
+
+export function Composer() {
+  const [attachments, setAttachments] = useState<UiComposerAttachment[]>([])
+
+  function handleSubmit(value: UiComposerValue) {
+    console.log(value.text, attachments)
+    setAttachments([])
+  }
+
+  return (
+    <LexicalComposer
+      attachments={attachments}
+      onAttachmentsChange={setAttachments}
+      onSubmit={handleSubmit}
+      sendPolicy="uploaded-only"
+    />
+  )
+}
+```
+
+## 宿主职责
+
+Composer 不会上传文件、调用你的 API 或重试失败的网络任务。
+
+你的宿主应用应该负责：
+
+- attachment validation 和 upload lifecycle
+- 最终 submit 行为
+- cancel 和 retry semantics
+- unified commands、command metadata，以及任何 app-specific execution policies
+
+## 相关导出
+
+这个 subpath 还暴露 attachment utilities 和统一的 `CommandPlugin` surface。优先使用 `LexicalComposer` 上的 `commands`；只有当默认 composer 行为接近但不完全满足时，再考虑 `CommandPlugin`。
+
+Mentions 和 slash commands 是同一个 command model 的 trigger styles。请把 model agents、MCP tools、skills、mentions、slash actions 和 custom intent 都建模成 `UiComposerCommand` records，而不是拆成独立的 mention 或 slash 数据模型。

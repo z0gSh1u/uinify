@@ -1,0 +1,131 @@
+---
+title: 上传生命周期
+description: 由宿主管理上传进度，并通过 composer attachment tray 展示。
+---
+
+`uinify` 把上传进度视为宿主拥有的状态。组件库会渲染附件状态，可以为从 composer 选择的文件创建初始 `queued` attachment records，并在 composer submit 中包含未被移除的附件。你的应用仍然负责上传编排，并在上传进度变化时更新 attachment status。
+
+如果你还没有把宿主职责和 `uinify` runtime 职责分开，请先阅读 [核心概念](/zh-cn/guides/core-concepts/)。对应本页的 docs-backed template 请看 [示例](/zh-cn/guides/examples/)。
+
+对应的示例模板在 `examples/templates/upload-template.tsx`。
+
+当前 package 中没有官方 upload client。请自带 uploader，再把进度反映回 composer。
+
+## 宿主拥有上传
+
+使用 `UiComposerAttachment[]` 作为上传系统和 composer 之间的 contract。
+
+- 可以让 composer 为选择或拖入的文件创建初始 `queued` attachments，也可以在宿主受控流程里加入等价的 `queued` records。
+- 当宿主 uploader 正在运行时，把 attachments 移动到 `uploading`。
+- 当宿主拥有稳定的远端结果后，把 attachments 标记为 `uploaded`，通常会带上 `remoteUrl`。
+- 当上传失败时，把 attachments 标记为 `error`，并提供 `error` message 供 retry UI 展示。
+- 宿主校验可以在上传前拒绝附件。这种情况下，请返回或渲染一个 `status: "error"` 的 attachment，带上 `rejection` object，并用稳定的 `sourceAttachmentId` 指回原始本地 attachment。
+- 如果用户取消正在进行的上传，请把它当作宿主拥有的 intent。Composer integrations 可以通过单独的宿主受控 UI 暴露它，但 tray 自身只反映 remove semantics，除非 callback contract 明确区分 cancel。
+- 通过把 attachment 标记为 `removed`，或从受控列表中过滤 removed items，把附件从 send payload 中移除。
+
+Composer 不会自己执行上传网络请求。它只反映当前的 `attachments` 数组，并通过 `onAttachmentsChange` 发出附件列表变化。
+
+## Composer 模式
+
+当前 `LexicalComposer` API 同时支持非受控和受控 attachments，但推荐集成模式是由宿主管理上传进度的受控列表。
+
+```tsx
+import { useState } from "react"
+import type { UiComposerAttachment, UiComposerValue } from "uinify"
+import { LexicalComposer } from "uinify/composer/lexical"
+
+export function ChatComposer() {
+  const [attachments, setAttachments] = useState<UiComposerAttachment[]>([])
+
+  async function retryAttachment(target: UiComposerAttachment) {
+    setAttachments((current) =>
+      current.map((attachment) =>
+        attachment.id === target.id
+          ? { ...attachment, status: "uploading", error: undefined, progress: 0 }
+          : attachment,
+      ),
+    )
+
+    try {
+      const remoteUrl = await uploadAttachment(target)
+
+      setAttachments((current) =>
+        current.map((attachment) =>
+          attachment.id === target.id
+            ? { ...attachment, status: "uploaded", progress: 100, remoteUrl }
+            : attachment,
+        ),
+      )
+    } catch (error) {
+      setAttachments((current) =>
+        current.map((attachment) =>
+          attachment.id === target.id
+            ? {
+                ...attachment,
+                status: "error",
+                error: error instanceof Error ? error.message : "Upload failed",
+              }
+            : attachment,
+        ),
+      )
+    }
+  }
+
+  function handleSubmit(value: UiComposerValue) {
+    // value.attachments includes every attachment except ones marked `removed`.
+    console.log(value)
+    setAttachments([])
+  }
+
+  return (
+    <LexicalComposer
+      attachments={attachments}
+      onAttachmentsChange={setAttachments}
+      onAttachmentRetry={retryAttachment}
+      onSubmit={handleSubmit}
+      sendPolicy="uploaded-only"
+    />
+  )
+}
+
+async function uploadAttachment(_attachment: UiComposerAttachment) {
+  return "https://example.com/uploaded-file"
+}
+```
+
+这个流程中的关键 props：
+
+- `attachments`：当前 attachment list 的宿主受控 source of truth。
+- `onAttachmentsChange`：composer 添加或移除附件时调用。
+- `onAttachmentRetry`：用户重试 `error` 状态附件时调用。
+- `onAttachmentCancel`：可选 hook，用于需要区分 cancel intent 和 removal 的 uploading attachments composer 集成。
+- `sendPolicy`：设置为 `"uploaded-only"` 时，所有未移除附件都必须到达 `uploaded` 才允许 submit；保留默认 `"allow-pending"` 时，可以在仍有 pending uploads 时 submit。
+
+## 校验和拒绝 Contract
+
+宿主校验具有权威性。Composer 可以收集文件并展示你提供的状态，但是否接受文件由你的应用决定。
+
+- 被接受的文件根据宿主更新继续经过 `queued`、`uploading`、`uploaded` 和 `error`。
+- 被拒绝的文件应该表示为 `status: "error"` 加 `rejection.message`，这样 tray 可以展示明确的校验反馈。
+- 在派生出的宿主 records 上使用 `sourceAttachmentId`，尤其是 rejected 或之后进入 transcript 的 attachments，以保留和原始本地 attachment entry 的连续性。
+- 对同一个底层文件，后续 lifecycle updates 应保持 `sourceAttachmentId` 稳定，这样 transcript rendering 可以清晰表达连续性，而不向终端用户暴露原始内部 ids。
+
+## Cancel Intent
+
+`uinify` 不会直接 abort 你的 network client。
+
+- 当提供了 `onAttachmentCancel` 时，composer 会把 `uploading` attachments 的 cancel intent 转发给宿主。
+- 当没有提供 `onAttachmentCancel` 时，移除 uploading attachment 会回退到本地 removal 行为。
+- 如果宿主把 canceled upload 转成 `error` 或 `removed` entry，请通过受控列表把更新后的 attachment state 传回。
+
+## 必需状态
+
+当前 attachment lifecycle surface 期待这些状态：
+
+- `queued`
+- `uploading`
+- `uploaded`
+- `error`
+- `removed`
+
+当 `sendPolicy` 是 `"uploaded-only"` 时，每个未移除附件都必须到达 `uploaded` 后，Send button 才会启用。

@@ -1,0 +1,159 @@
+---
+title: 流映射
+description: 在事件到达 runtime 之前，将你的后端协议映射成 UiStreamEvent。
+---
+
+在事件到达 runtime 之前，把宿主或后端协议映射成 `UiStreamEvent`。这样 `uinify` 就可以专注于 chat state 和 rendering，而不是供应商特定的 transport 细节。
+
+对应的示例模板在 `examples/templates/adapter-template.tsx`。
+
+如果你的 transport 是 Server-Sent Events，请结合 [SSE 集成](/zh-cn/integration/sse/) 阅读。更多由 docs 支撑的模板请看 [示例](/zh-cn/guides/examples/)。
+
+首次接入时，推荐在应用入口附近引入一次 `uinify/styles.css`。
+
+## 模式
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+type HostEvent =
+  | { kind: "begin"; id: string }
+  | { kind: "text"; id: string; partId: string; text: string }
+  | { kind: "end"; id: string }
+
+export function mapHostEvent(event: HostEvent): UiStreamEvent[] {
+  switch (event.kind) {
+    case "begin":
+      return [
+        {
+          type: "message.started",
+          messageId: event.id,
+          role: "assistant",
+        },
+      ]
+
+    case "text":
+      return [
+        {
+          type: "part.text.delta",
+          messageId: event.id,
+          partId: event.partId,
+          delta: event.text,
+        },
+      ]
+
+    case "end":
+      return [
+        {
+          type: "message.completed",
+          messageId: event.id,
+        },
+      ]
+  }
+}
+```
+
+把映射后的事件派发进 runtime：
+
+```ts
+for (const streamEvent of mapHostEvent(event)) {
+  runtime.dispatch(streamEvent)
+}
+```
+
+## Agent 步骤和图片
+
+工具调用以及其他 agent execution nodes 映射成 step events。工具调用就是一个 `category: "tool"` 的 `step`。
+
+```ts
+import type { UiStreamEvent } from "uinify"
+
+type HostToolCompleted = {
+  kind: "tool.completed"
+  messageId: string
+  toolCallId: string
+  name: string
+  input: string
+  output: string
+}
+
+export function mapToolCompleted(event: HostToolCompleted): UiStreamEvent[] {
+  return [
+    {
+      type: "part.step.started",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      category: "tool",
+      label: event.name,
+      inputSummary: event.input,
+    },
+    {
+      type: "part.step.completed",
+      messageId: event.messageId,
+      partId: event.toolCallId,
+      outputSummary: event.output,
+    },
+  ]
+}
+```
+
+图片在宿主拥有可展示 URL 之后，映射成 transcript image parts。
+`partId` 会成为 image part 的 `id`，runtime 会补上 `kind: "image"`。
+
+```ts
+const imageEvent: UiStreamEvent = {
+  type: "part.image.emitted",
+  messageId: "user-1",
+  partId: "image-1",
+  image: {
+    url: "https://cdn.example.com/sketch.png",
+    alt: "Uploaded sketch",
+    mimeType: "image/png",
+    sourceAttachmentId: "attachment-1",
+  },
+}
+```
+
+## 稳定 Adapter Contract
+
+当 mapper 成为共享集成面时，用 `createAdapterRunner` 包住纯 mapper。它会返回稳定的 result shape，包含规范化 `.events`，以及用于提示可疑事件顺序和无效 artifact views 的 `.diagnostics`。
+
+```ts
+import { createAdapterRunner, type UiStreamEvent } from "uinify"
+
+type HostEvent =
+  | { kind: "begin"; id: string }
+  | { kind: "text"; id: string; partId: string; text: string }
+  | { kind: "end"; id: string }
+
+function mapHostEvent(event: HostEvent): UiStreamEvent[] {
+  switch (event.kind) {
+    case "begin":
+      return [{ type: "message.started", messageId: event.id, role: "assistant" }]
+    case "text":
+      return [{ type: "part.text.delta", messageId: event.id, partId: event.partId, delta: event.text }]
+    case "end":
+      return [{ type: "message.completed", messageId: event.id }]
+  }
+}
+
+const adaptHostEvent = createAdapterRunner(mapHostEvent)
+
+for (const result of incomingEvents.map(adaptHostEvent)) {
+  if (result.diagnostics.length > 0) {
+    console.warn(result.diagnostics)
+  }
+
+  for (const streamEvent of result.events) {
+    runtime.dispatch(streamEvent)
+  }
+}
+```
+
+## 规则
+
+`message.started` 必须在同一条消息的任何 part events 之前到达。runtime 不会缓存 orphan part events。
+
+映射边界止于 `UiStreamEvent`。不要把供应商特定 payload 或 transport-specific event objects 放进 `uinify` state。工具和 agent execution 使用 `step` events；只有当宿主代码已经拥有可展示图片 URL 时，才使用 `part.image.emitted`。
+
+只有在 `createAdapterRunner` 不足以表达你的 wrapper 时，才直接使用 `createAdapterResult` 和 `validateAdapterEvents`。

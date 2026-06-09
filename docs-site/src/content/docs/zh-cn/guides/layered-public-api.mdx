@@ -1,0 +1,96 @@
+---
+title: 分层公开 API
+description: 为 v0.4 集成选择 core、transcript、composer、adapter 或 theme 层。
+---
+
+Uinify v0.4 是一个分层的 agent UI kit。先从当前工作真正需要的层开始，只有当产品需要时再组合更多层。
+
+## 规则
+
+选择能解决集成需求的最小公开层：core 负责状态，transcript 负责渲染，composer 负责输入，adapter 负责映射，theme 负责视觉定制。
+
+## Core 层
+
+当你需要规范化 UI 状态和事件时，使用 `uinify` 包根入口。
+
+稳定的 core API 包括 `createChatRuntime`、`UiRuntimeState`、`UiMessage`、`UiMessagePart`、`UiStreamEvent`、`UiComposerCommand`，以及 `createAdapterRunner` 等 adapter helpers。
+
+当你已经有宿主事件，并且需要一个规范化 transcript model 时，使用 core。
+
+```ts
+import { createChatRuntime, type UiStreamEvent } from "uinify"
+
+const runtime = createChatRuntime({ conversationId: "layered-demo" })
+const events: UiStreamEvent[] = [
+  { type: "message.started", messageId: "m1", role: "assistant" },
+  { type: "part.text.delta", messageId: "m1", partId: "text-1", delta: "Core owns state and events." },
+  { type: "message.completed", messageId: "m1" },
+]
+
+for (const event of events) {
+  runtime.dispatch(event)
+}
+```
+
+## Transcript 层
+
+当你想使用默认渲染或 renderer override 接口时，使用 `uinify/react`。`ChatRoot`、`MessageList`、`Message`、`MessagePart`、`StepBlock`、`ImagePart`、`ReasoningBlock` 和 `ArtifactContainer` 都在这里。
+
+在替换整个 message list 之前，优先使用 `renderStep`、`renderImage` 和 artifact registry hooks 等 transcript overrides。
+
+```tsx
+import { ChatRoot, MessageList } from "uinify/react"
+
+<ChatRoot runtime={runtime} renderers={{ renderStep: ({ part }) => <strong>{part.label}</strong> }}>
+  <MessageList />
+</ChatRoot>
+```
+
+## Composer 层
+
+当产品需要文本输入、附件和命令选择时，使用 `uinify/composer/lexical`。
+
+Commands 表示输入意图。它们不是工具结果，也不会由 Uinify 执行。
+
+```tsx
+import { LexicalComposer } from "uinify/composer/lexical"
+
+<LexicalComposer
+  commands={[
+    { id: "agent-research", kind: "agent", label: "Researcher", insertText: "@researcher ", trigger: "@" },
+    { id: "mcp-browser-search", kind: "mcp", label: "browser.search", insertText: "/browser.search ", trigger: "/" },
+  ]}
+  onSubmit={(value) => {
+    console.log(value.commands)
+  }}
+/>
+```
+
+## Adapter 层
+
+当宿主协议需要转换成规范化 `UiStreamEvent[]` 时，使用 adapter helpers。
+
+Adapters 的边界止于 UI events 和 diagnostics。它们不会变成供应商 SDK、模型客户端或 workflow engine。
+
+```ts
+import { createAdapterRunner, type UiStreamEvent } from "uinify"
+
+const adaptHostEvent = createAdapterRunner((event: { id: string; text: string }): UiStreamEvent[] => [
+  { type: "message.started", messageId: event.id, role: "assistant" },
+  { type: "part.text.delta", messageId: event.id, partId: `${event.id}-text`, delta: event.text },
+  { type: "message.completed", messageId: event.id },
+])
+```
+
+## Theme 层
+
+当默认结构合适，但视觉语言需要变化时，使用 `uinify/styles.css`、CSS tokens、稳定的 `data-slot` 区域和 `slotClassNames`。
+
+推荐顺序是：tokens、stable slots、`slotClassNames`、renderer overrides，最后才替换大块 transcript components。
+
+## 相关指南
+
+- [Agent 步骤](/zh-cn/integration/agent-steps/) 解释 step event model。
+- [StepBlock](/zh-cn/components/step-block/) 解释默认 step 渲染和 `renderStep`。
+- [Composer 命令](/zh-cn/components/composer-commands/) 解释 command input intent。
+- [多模态图片](/zh-cn/integration/multimodal-images/) 解释宿主负责的图片上传和 transcript image parts。
