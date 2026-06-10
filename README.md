@@ -26,11 +26,11 @@ For first-time adoption, the recommended default setup is to import `uinify/styl
 
 Stable styling hooks are available through documented `data-slot` regions, `slotClassNames`, and the `--uinify-*` tokens in `uinify/styles.css`.
 
-See the matching example templates in `examples/templates/minimal-app.tsx`, `examples/templates/adapter-template.tsx`, `examples/templates/upload-template.tsx`, and `examples/templates/artifact-template.tsx`.
+The example playground is intentionally narrow. It demonstrates the retained OpenAI-like reference mapper in `examples/adapters/openai-like.ts` and can be run with `pnpm dev:example`.
 
 ## Reference-only Surface
 
-The package currently exports more types and React primitives than the initial adoption docs cover. Treat those lower-level renderers, artifact helpers, composer exports, and example adapters as reference material until you have a concrete reason to build past the core runtime plus list flow.
+The package currently exports more types and React primitives than the initial adoption docs cover. Treat lower-level renderers, artifact helpers, composer exports, and reference mapper code as reference material until you have a concrete reason to build past the core runtime plus list flow.
 
 ## Docs
 

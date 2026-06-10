@@ -1,44 +1,26 @@
 ---
 title: Examples
-description: Copyable starting points for common uinify integration shapes.
+description: The intentionally narrow example surface kept in this repository.
 ---
 
-The example templates are copyable starting points, not separate APIs. Use them to choose an integration shape, then keep your production code anchored to the public package surface.
+The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable playground and one retained OpenAI-like mapper.
 
-## Pick A Starting Point
+## Current Files
 
-- `examples/templates/minimal-app.tsx`: smallest runtime plus transcript wiring
-- `examples/templates/adapter-template.tsx`: host-event mapping with `createAdapterRunner`
-- `examples/templates/upload-template.tsx`: controlled attachment lifecycle
-- `examples/templates/artifact-template.tsx`: artifact renderer overrides
+- `examples/playground/App.tsx`: local playground that maps OpenAI-like chunks into `UiStreamEvent` values and renders the resulting transcript
+- `examples/adapters/openai-like.ts`: reference-only mapper for an OpenAI-like stream shape
 
-## Common Paths
+Run the playground locally:
 
-If you are just proving out rendering, start with the minimal template:
-
-```tsx
-import { useState } from "react"
-import { createChatRuntime } from "uinify"
-import { ChatRoot, MessageList } from "uinify/react"
-
-export function App() {
-  const [runtime] = useState(() => createChatRuntime({ conversationId: "demo" }))
-
-  return (
-    <ChatRoot runtime={runtime}>
-      <MessageList />
-    </ChatRoot>
-  )
-}
+```bash
+pnpm dev:example
 ```
 
-If you already have a backend protocol, move to the adapter template and normalize host events before dispatch.
+## How To Read The Example
 
-## How To Read The Examples
+Use the playground as a smoke check for the public runtime and transcript renderer. Use the mapper as a reference for where protocol normalization should live.
 
-- Treat `examples/templates/*` as docs-backed recipes.
-- Treat `examples/adapters/*` as reference-only protocol mappers.
-- Copy the pattern, not the exact fixture ids or example labels.
+Do not treat the mapper as a supported OpenAI compatibility layer. Real products should map their own backend payloads into `UiStreamEvent` at the host boundary.
 
 ## Where To Go Next
 

@@ -5,7 +5,7 @@ description: 在事件到达 runtime 之前，将你的后端协议映射成 UiS
 
 在事件到达 runtime 之前，把宿主或后端协议映射成 `UiStreamEvent`。这样 `uinify` 就可以专注于 chat state 和 rendering，而不是供应商特定的 transport 细节。
 
-对应的示例模板在 `examples/templates/adapter-template.tsx`。
+保留的 reference mapper 在 `examples/adapters/openai-like.ts`。
 
 如果你的 transport 是 Server-Sent Events，请结合 [SSE 集成](/zh-cn/integration/sse/) 阅读。更多由 docs 支撑的模板请看 [示例](/zh-cn/guides/examples/)。
 

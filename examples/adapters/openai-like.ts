@@ -71,6 +71,81 @@ export type OpenAiLikeChunk =
   | OpenAiLikeArtifactChunk
   | OpenAiLikeResponseCompletedChunk
 
+export const openAiLikeDemoChunks: OpenAiLikeChunk[] = [
+  {
+    type: "response.started",
+    response: {
+      response_id: "msg_openai_like_1",
+      speaker: "assistant",
+    },
+  },
+  {
+    type: "response.output_text.delta",
+    response_id: "msg_openai_like_1",
+    item: {
+      item_id: "text_openai_like_1",
+      index: 0,
+    },
+    delta: "Hello ",
+  },
+  {
+    type: "response.output_text.delta",
+    response_id: "msg_openai_like_1",
+    item: {
+      item_id: "text_openai_like_1",
+      index: 1,
+    },
+    delta: "world!",
+  },
+  {
+    type: "response.tool.updated",
+    response_id: "msg_openai_like_1",
+    tool_call: {
+      call_id: "tool_openai_like_1",
+      name: "searchDocs",
+      phase: "finished",
+      arguments_text: '{"query":"reference mappers"}',
+      result: {
+        summary: "3 results returned",
+      },
+    },
+  },
+  {
+    type: "response.artifact",
+    response_id: "msg_openai_like_1",
+    asset: {
+      artifact_id: "artifact_openai_like_1",
+      artifact_type: "code",
+      name: "Reference mapper example",
+      attributes: {
+        runnable: true,
+        sourceProtocol: "openai-like",
+      },
+      primary_view: "source",
+      contents: [
+        {
+          view_id: "source",
+          title: "TypeScript",
+          mime_type: "text/x-typescript",
+          body: "export const mapped = true\n",
+        },
+        {
+          view_id: "preview",
+          title: "Preview",
+          mime_type: "application/vnd.uinify.preview",
+          body: "mapped = true",
+        },
+      ],
+    },
+  },
+  {
+    type: "response.completed",
+    response: {
+      response_id: "msg_openai_like_1",
+    },
+  },
+]
+
 function mapArtifactViewKind(mimeType: string): UiArtifactView["kind"] {
   if (mimeType === "application/json") {
     return "structured"

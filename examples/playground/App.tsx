@@ -1,92 +1,143 @@
-import { useState } from "react"
-import { exampleTemplateSections, type ExampleTemplate } from "../fixtures"
-import { AdapterTemplate } from "../templates/adapter-template"
-import { AgentShowcaseTemplate } from "../templates/agent-showcase-template"
-import { ArtifactTemplate } from "../templates/artifact-template"
-import { MinimalAppTemplate } from "../templates/minimal-app"
-import { MultimodalTemplate } from "../templates/multimodal-template"
-import { UploadTemplate } from "../templates/upload-template"
-import artifactDocsHref from "../../docs-site/src/content/docs/advanced/artifact-renderers.mdx?url"
-import composerDocsHref from "../../docs-site/src/content/docs/components/composer-lexical.mdx?url"
-import gettingStartedDocsHref from "../../docs-site/src/content/docs/getting-started.mdx?url"
-import layeredPublicApiDocsHref from "../../docs-site/src/content/docs/guides/layered-public-api.mdx?url"
-import multimodalImagesDocsHref from "../../docs-site/src/content/docs/integration/multimodal-images.mdx?url"
+import { useMemo } from "react"
+import { createChatRuntime, type UiStreamEvent } from "../../src"
+import { ChatRoot, MessageList } from "../../src/react"
+import {
+  adaptOpenAiLikeChunk,
+  openAiLikeDemoChunks,
+  type OpenAiLikeChunk,
+} from "../adapters/openai-like"
 import streamMappingDocsHref from "../../docs-site/src/content/docs/integration/stream-mapping.mdx?url"
-import uploadLifecycleDocsHref from "../../docs-site/src/content/docs/integration/upload-lifecycle.mdx?url"
 
-const templateRegistry = {
-  minimal: MinimalAppTemplate,
-  adapter: AdapterTemplate,
-  multimodal: MultimodalTemplate,
-  upload: UploadTemplate,
-  "agent-showcase": AgentShowcaseTemplate,
-  artifact: ArtifactTemplate,
-} satisfies Record<ExampleTemplate["id"], () => React.JSX.Element>
+function describeChunk(chunk: OpenAiLikeChunk) {
+  switch (chunk.type) {
+    case "response.started":
+      return chunk.response.response_id
+    case "response.output_text.delta":
+      return chunk.delta
+    case "response.tool.updated":
+      return `${chunk.tool_call.name}: ${chunk.tool_call.phase}`
+    case "response.artifact":
+      return chunk.asset.name ?? chunk.asset.artifact_id
+    case "response.completed":
+      return chunk.response.response_id
+  }
+}
 
-const templates = exampleTemplateSections.flatMap((section) => section.templates)
-
-const docsHrefByPath = {
-  "docs/getting-started.md": gettingStartedDocsHref,
-  "docs/components/composer-lexical.md": composerDocsHref,
-  "docs/integration/stream-mapping.md": streamMappingDocsHref,
-  "docs/integration/multimodal-images.md": multimodalImagesDocsHref,
-  "docs/integration/upload-lifecycle.md": uploadLifecycleDocsHref,
-  "docs/guides/layered-public-api.md": layeredPublicApiDocsHref,
-  "docs/advanced/artifact-renderers.md": artifactDocsHref,
-} satisfies Record<ExampleTemplate["docsPath"], string>
+function describeMappedEvent(event: UiStreamEvent) {
+  switch (event.type) {
+    case "message.started":
+      return `${event.role} message ${event.messageId}`
+    case "part.text.delta":
+      return event.delta
+    case "part.step.started":
+      return `${event.label} started`
+    case "part.step.completed":
+      return event.outputSummary ?? `${event.partId} completed`
+    case "part.step.failed":
+      return event.error
+    case "part.artifact.emitted":
+      return event.artifact.title ?? event.artifact.id
+    case "message.completed":
+      return `message ${event.messageId} completed`
+    default:
+      return event.type
+  }
+}
 
 export function ExamplePlayground() {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<ExampleTemplate["id"]>(templates[0].id)
+  const { diagnostics, mappedEvents, runtime } = useMemo(() => {
+    const nextRuntime = createChatRuntime({ conversationId: "openai-like-demo" })
+    const nextDiagnostics: string[] = []
+    const nextEvents: UiStreamEvent[] = []
 
-  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0]
-  const SelectedTemplate = templateRegistry[selectedTemplate.id]
-  const selectedDocsHref = docsHrefByPath[selectedTemplate.docsPath]
+    for (const chunk of openAiLikeDemoChunks) {
+      const result = adaptOpenAiLikeChunk(chunk)
+
+      nextDiagnostics.push(...result.diagnostics.map((diagnostic) => diagnostic.message))
+      nextEvents.push(...result.events)
+
+      for (const event of result.events) {
+        nextRuntime.dispatch(event)
+      }
+    }
+
+    return {
+      diagnostics: nextDiagnostics,
+      mappedEvents: nextEvents,
+      runtime: nextRuntime,
+    }
+  }, [])
 
   return (
     <main className="playground-shell">
-      <div className="playground-layout">
-        <aside className="playground-sidebar" aria-label="Example templates">
-          <header className="playground-sidebar-header">
-            <p>uinify</p>
-            <h1>uinify examples</h1>
+      <section className="example-layout" aria-label="OpenAI-like adapter example">
+        <aside className="example-sidebar">
+          <header>
+            <p>uinify examples</p>
+            <h1>OpenAI-like stream mapper</h1>
           </header>
-
-          {exampleTemplateSections.map((section) => (
-            <section key={section.id} className="playground-section">
-              <h2>{section.title}</h2>
-              <div className="playground-template-list">
-                {section.templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className="playground-template-button"
-                    aria-label={template.title}
-                    aria-pressed={template.id === selectedTemplate.id}
-                    onClick={() => setSelectedTemplateId(template.id)}
-                  >
-                    <span>{template.title}</span>
-                    <small>{template.description}</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
+          <p>
+            This playground now keeps one narrow example: map an OpenAI-like stream into canonical
+            `UiStreamEvent` values, then render the runtime transcript.
+          </p>
+          <a href={streamMappingDocsHref}>Read stream mapping docs</a>
         </aside>
 
-        <section className="playground-preview" role="region" aria-label="Selected template preview">
-          <div className="playground-preview-header">
+        <section className="example-preview" aria-label="Mapped transcript preview">
+          <div className="example-preview-header">
             <div>
-              <p className="playground-preview-title">{selectedTemplate.title}</p>
-              <p>{selectedTemplate.description}</p>
+              <p className="example-eyebrow">Runtime output</p>
+              <h2>Mapped transcript</h2>
             </div>
-            <a href={selectedDocsHref}>Read docs</a>
+            <span>{mappedEvents.length} UI events</span>
           </div>
 
-          <div className="playground-preview-body">
-            <SelectedTemplate />
+          <div className="example-transcript">
+            <ChatRoot runtime={runtime}>
+              <MessageList />
+            </ChatRoot>
           </div>
+
+          <div className="example-stream-grid">
+            <section>
+              <h3>Input chunks</h3>
+              <ol className="example-event-list">
+                {openAiLikeDemoChunks.map((chunk, index) => (
+                  <li key={`${chunk.type}-${index}`}>
+                    <code>{chunk.type}</code>
+                    <span>{describeChunk(chunk)}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section>
+              <h3>Mapped events</h3>
+              <ol className="example-event-list">
+                {mappedEvents.map((event, index) => (
+                  <li key={`${event.type}-${index}`}>
+                    <code>{event.type}</code>
+                    <span>{describeMappedEvent(event)}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+
+          <details className="example-details">
+            <summary>Adapter diagnostics</summary>
+            {diagnostics.length > 0 ? (
+              <ul>
+                {diagnostics.map((diagnostic) => (
+                  <li key={diagnostic}>{diagnostic}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No adapter diagnostics for this stream.</p>
+            )}
+          </details>
         </section>
-      </div>
+      </section>
     </main>
   )
 }

@@ -23,11 +23,11 @@
 ## Build And Test Quirks
 - `pnpm build` does two things: bundles with `tsup` and then copies `src/styles.css` to `dist/styles.css` via `scripts/copy-styles.mjs`. If you change styles or CSS exports, verify with `pnpm build`.
 - Vitest runs in `jsdom` for the whole repo via `vite.config.ts`, and `src/test/setup.ts` loads `@testing-library/jest-dom/vitest`.
-- Many UI tests mock `react-virtuoso`; follow that pattern for `MessageList` and example-playground tests instead of relying on real virtualization.
+- Many UI tests mock `react-virtuoso`; follow that pattern for `MessageList` tests instead of relying on real virtualization.
 
 ## Product Boundaries
 - The docs intentionally keep the recommended adoption surface narrow: `createChatRuntime`, `UiStreamEvent`, `createAdapterRunner`, `ChatRoot`, `MessageList`, and the documented styling hooks.
-- `examples/adapters/*` are reference-only examples. Do not treat them as stable compatibility layers or copy their shapes into public API decisions.
+- `examples/adapters/openai-like.ts` is a reference-only mapper example. Do not treat it as a stable compatibility layer or copy its shape into public API decisions.
 - Styling stability is documented around `uinify/styles.css` tokens, `data-slot` regions, and `slotClassNames`; prefer those before changing renderer structure.
 
 ## Docs Site
@@ -39,8 +39,8 @@
 
 ## Docs And Example Coupling
 - The example playground in `examples/playground/App.tsx` is docs-backed product surface, not throwaway demo code.
-- Template metadata lives in `examples/fixtures/index.ts`; if you rename docs paths, section titles, or template labels, update that file and the tests that assert those exact strings.
-- The strongest regression checks for docs/example alignment are `examples/tests/example-flows.test.tsx` and `examples/tests/templates.test.tsx`.
+- The playground is intentionally narrow and should not grow new pseudo-template surfaces without validated product need.
+- If docs paths used by the playground change, update `examples/playground/App.tsx`.
 
 ## Verification Expectations
 - Preferred lightweight verification after code changes: `pnpm typecheck && pnpm test`.

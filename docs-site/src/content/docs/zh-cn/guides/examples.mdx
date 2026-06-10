@@ -1,44 +1,26 @@
 ---
 title: 示例
-description: 面向常见 uinify 集成形态的可复制起点。
+description: 当前仓库中刻意收窄的 example surface。
 ---
 
-示例模板是可复制的起点，不是新的 API。用它们选择集成形态，然后把生产代码锚定在公开 package surface 上。
+仓库不再保留推测性质的 app templates。当前 example surface 有意收窄为一个可运行 playground 和一个保留的 OpenAI-like mapper。
 
-## 选择起点
+## 当前文件
 
-- `examples/templates/minimal-app.tsx`：最小 runtime 与 transcript wiring
-- `examples/templates/adapter-template.tsx`：使用 `createAdapterRunner` 映射宿主事件
-- `examples/templates/upload-template.tsx`：受控附件生命周期
-- `examples/templates/artifact-template.tsx`：artifact renderer overrides
+- `examples/playground/App.tsx`：本地 playground，把 OpenAI-like chunks 映射成 `UiStreamEvent`，再渲染 runtime transcript
+- `examples/adapters/openai-like.ts`：OpenAI-like stream shape 的 reference-only mapper
 
-## 常见路径
+本地运行 playground：
 
-如果你只是验证渲染，请从 minimal template 开始：
-
-```tsx
-import { useState } from "react"
-import { createChatRuntime } from "uinify"
-import { ChatRoot, MessageList } from "uinify/react"
-
-export function App() {
-  const [runtime] = useState(() => createChatRuntime({ conversationId: "demo" }))
-
-  return (
-    <ChatRoot runtime={runtime}>
-      <MessageList />
-    </ChatRoot>
-  )
-}
+```bash
+pnpm dev:example
 ```
-
-如果你已经有后端协议，请切到 adapter template，在 dispatch 前先规范化宿主事件。
 
 ## 如何阅读示例
 
-- 把 `examples/templates/*` 当成由 docs 支撑的 recipes。
-- 把 `examples/adapters/*` 当成仅供参考的 protocol mappers。
-- 复制模式，而不是复制 fixture id 或示例标签。
+把 playground 当作 public runtime 和 transcript renderer 的 smoke check。把 mapper 当作协议规范化应该放在什么位置的参考。
+
+不要把这个 mapper 当成受支持的 OpenAI 兼容层。真实产品应该在宿主边界把自己的后端 payloads 映射成 `UiStreamEvent`。
 
 ## 下一步
 

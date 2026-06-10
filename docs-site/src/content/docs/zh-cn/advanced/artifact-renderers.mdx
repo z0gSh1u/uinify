@@ -5,8 +5,6 @@ description: 通过 registry overrides 定制 artifact parts 的渲染方式。
 
 请在阅读 [核心概念](/zh-cn/guides/core-concepts/) 和 [示例](/zh-cn/guides/examples/) 后再看本页。Artifacts 是 message parts，包含一个 typed container shape 和一个或多个可渲染的 `views`。当前模型是 `UiArtifactPart`，它包装了一个 `UiArtifact`，其中包括：
 
-对应的示例模板在 `examples/templates/artifact-template.tsx`。
-
 - `kind`：宿主定义的 artifact 类别，例如 `code`、`image` 或另一个领域特定 key。
 - `title` 和 `metadata`：可选展示元数据。
 - `defaultViewId`：可选的首选初始 view。
