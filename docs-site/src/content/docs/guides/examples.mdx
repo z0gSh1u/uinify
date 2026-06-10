@@ -3,14 +3,15 @@ title: Examples
 description: The intentionally narrow example surface kept in this repository.
 ---
 
-The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable playground and one retained OpenAI-like mapper.
+The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app and one retained OpenAI-like mapper.
 
 ## Current Files
 
-- `examples/playground/App.tsx`: local playground that maps OpenAI-like chunks into `UiStreamEvent` values and renders the resulting transcript
+- `examples/src/App.tsx`: local examples app shell and route registry
+- `examples/playground/App.tsx`: `/playground` route that maps OpenAI-like chunks into `UiStreamEvent` values and renders the resulting transcript
 - `examples/adapters/openai-like.ts`: reference-only mapper for an OpenAI-like stream shape
 
-Run the playground locally:
+Run the examples app locally:
 
 ```bash
 pnpm dev:example
@@ -18,7 +19,7 @@ pnpm dev:example
 
 ## How To Read The Example
 
-Use the playground as a smoke check for the public runtime and transcript renderer. Use the mapper as a reference for where protocol normalization should live.
+Use `/playground` as a smoke check for the public runtime and transcript renderer. Use the mapper as a reference for where protocol normalization should live.
 
 Do not treat the mapper as a supported OpenAI compatibility layer. Real products should map their own backend payloads into `UiStreamEvent` at the host boundary.
 

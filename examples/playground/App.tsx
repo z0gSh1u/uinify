@@ -6,7 +6,7 @@ import {
   openAiLikeDemoChunks,
   type OpenAiLikeChunk,
 } from "../adapters/openai-like"
-import streamMappingDocsHref from "../../docs-site/src/content/docs/integration/stream-mapping.mdx?url"
+import "./playground.css"
 
 function describeChunk(chunk: OpenAiLikeChunk) {
   switch (chunk.type) {
@@ -69,75 +69,59 @@ export function ExamplePlayground() {
   }, [])
 
   return (
-    <main className="playground-shell">
-      <section className="example-layout" aria-label="OpenAI-like adapter example">
-        <aside className="example-sidebar">
-          <header>
-            <p>uinify examples</p>
-            <h1>OpenAI-like stream mapper</h1>
-          </header>
-          <p>
-            This playground now keeps one narrow example: map an OpenAI-like stream into canonical
-            `UiStreamEvent` values, then render the runtime transcript.
-          </p>
-          <a href={streamMappingDocsHref}>Read stream mapping docs</a>
-        </aside>
+    <section className="playground-route" aria-label="OpenAI-like adapter example">
+      <div className="example-preview-header">
+        <div>
+          <p className="example-eyebrow">Runtime output</p>
+          <h2>Mapped transcript</h2>
+        </div>
+        <span>{mappedEvents.length} UI events</span>
+      </div>
 
-        <section className="example-preview" aria-label="Mapped transcript preview">
-          <div className="example-preview-header">
-            <div>
-              <p className="example-eyebrow">Runtime output</p>
-              <h2>Mapped transcript</h2>
-            </div>
-            <span>{mappedEvents.length} UI events</span>
-          </div>
+      <div className="example-transcript">
+        <ChatRoot runtime={runtime}>
+          <MessageList />
+        </ChatRoot>
+      </div>
 
-          <div className="example-transcript">
-            <ChatRoot runtime={runtime}>
-              <MessageList />
-            </ChatRoot>
-          </div>
-
-          <div className="example-stream-grid">
-            <section>
-              <h3>Input chunks</h3>
-              <ol className="example-event-list">
-                {openAiLikeDemoChunks.map((chunk, index) => (
-                  <li key={`${chunk.type}-${index}`}>
-                    <code>{chunk.type}</code>
-                    <span>{describeChunk(chunk)}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            <section>
-              <h3>Mapped events</h3>
-              <ol className="example-event-list">
-                {mappedEvents.map((event, index) => (
-                  <li key={`${event.type}-${index}`}>
-                    <code>{event.type}</code>
-                    <span>{describeMappedEvent(event)}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          </div>
-
-          <details className="example-details">
-            <summary>Adapter diagnostics</summary>
-            {diagnostics.length > 0 ? (
-              <ul>
-                {diagnostics.map((diagnostic) => (
-                  <li key={diagnostic}>{diagnostic}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>No adapter diagnostics for this stream.</p>
-            )}
-          </details>
+      <div className="example-stream-grid">
+        <section>
+          <h3>Input chunks</h3>
+          <ol className="example-event-list">
+            {openAiLikeDemoChunks.map((chunk, index) => (
+              <li key={`${chunk.type}-${index}`}>
+                <code>{chunk.type}</code>
+                <span>{describeChunk(chunk)}</span>
+              </li>
+            ))}
+          </ol>
         </section>
-      </section>
-    </main>
+
+        <section>
+          <h3>Mapped events</h3>
+          <ol className="example-event-list">
+            {mappedEvents.map((event, index) => (
+              <li key={`${event.type}-${index}`}>
+                <code>{event.type}</code>
+                <span>{describeMappedEvent(event)}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+
+      <details className="example-details">
+        <summary>Adapter diagnostics</summary>
+        {diagnostics.length > 0 ? (
+          <ul>
+            {diagnostics.map((diagnostic) => (
+              <li key={diagnostic}>{diagnostic}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>No adapter diagnostics for this stream.</p>
+        )}
+      </details>
+    </section>
   )
 }

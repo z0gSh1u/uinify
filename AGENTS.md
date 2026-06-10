@@ -2,7 +2,7 @@
 
 ## Scope
 - This repo is a single-package TypeScript library with a docs site in `docs-site/`.
-- Treat `dist/` and `examples/playground/dist-example/` as generated output; do not edit them by hand.
+- Treat `dist/` and `examples/dist-example/` as generated output; do not edit them by hand.
 
 ## Primary Entry Points
 - `src/index.ts` is the package root (`uinify`) for core model types, runtime APIs, and adapter helpers.
@@ -17,8 +17,8 @@
 - Run a focused test file with `pnpm test -- src/runtime/create-chat-runtime.test.ts`.
 - Run type checks with `pnpm typecheck`.
 - Build the package with `pnpm build`.
-- Run the example playground locally with `pnpm dev:example`.
-- Build the example playground with `pnpm build:example`.
+- Run the examples app locally with `pnpm dev:example`.
+- Build the examples app with `pnpm build:example`.
 
 ## Build And Test Quirks
 - `pnpm build` does two things: bundles with `tsup` and then copies `src/styles.css` to `dist/styles.css` via `scripts/copy-styles.mjs`. If you change styles or CSS exports, verify with `pnpm build`.
@@ -38,9 +38,9 @@
 - Do not edit the deleted `docs/` directory; its content has been migrated to `docs-site/src/content/docs/`.
 
 ## Docs And Example Coupling
-- The example playground in `examples/playground/App.tsx` is docs-backed product surface, not throwaway demo code.
-- The playground is intentionally narrow and should not grow new pseudo-template surfaces without validated product need.
-- If docs paths used by the playground change, update `examples/playground/App.tsx`.
+- The examples app in `examples/src/App.tsx` is docs-backed product surface, not throwaway demo code.
+- `examples/playground/App.tsx` is one route in that app and should stay focused on the retained stream-mapping example.
+- If example route labels or paths change, keep `examples/src/App.tsx` and the examples guide in sync.
 
 ## Verification Expectations
 - Preferred lightweight verification after code changes: `pnpm typecheck && pnpm test`.

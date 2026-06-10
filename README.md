@@ -26,7 +26,7 @@ For first-time adoption, the recommended default setup is to import `uinify/styl
 
 Stable styling hooks are available through documented `data-slot` regions, `slotClassNames`, and the `--uinify-*` tokens in `uinify/styles.css`.
 
-The example playground is intentionally narrow. It demonstrates the retained OpenAI-like reference mapper in `examples/adapters/openai-like.ts` and can be run with `pnpm dev:example`.
+The examples app is intentionally narrow. Its `/playground` route demonstrates the retained OpenAI-like reference mapper in `examples/adapters/openai-like.ts` and can be run with `pnpm dev:example`.
 
 ## Reference-only Surface
 
