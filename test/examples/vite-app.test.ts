@@ -26,4 +26,14 @@ describe("examples Vite app", () => {
     expect(app).not.toContain("docs-site")
     expect(existsSync(resolve(repoRoot, "examples/playground/index.html"))).toBe(false)
   })
+
+  it("keeps the real chat example as an examples app route", () => {
+    const app = readRepoFile("examples/src/App.tsx")
+    const config = readRepoFile("vite.example.config.ts")
+
+    expect(app).toContain('path: "/chat"')
+    expect(app).toContain("ChatExample")
+    expect(app).not.toContain("UINIFY_LLM_API_KEY")
+    expect(config).toContain("createOpenAICompatibleChatPlugin")
+  })
 })

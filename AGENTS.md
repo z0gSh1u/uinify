@@ -39,6 +39,7 @@
 
 ## Docs And Example Coupling
 - The examples app in `examples/src/App.tsx` is docs-backed product surface, not throwaway demo code.
+- `examples/chat/ChatExample.tsx` is the real OpenAI-compatible chat route. Keep API keys server-side through `examples/server/openai-compatible-chat.ts`.
 - `examples/playground/App.tsx` is one route in that app and should stay focused on the retained stream-mapping example.
 - If example route labels or paths change, keep `examples/src/App.tsx` and the examples guide in sync.
 

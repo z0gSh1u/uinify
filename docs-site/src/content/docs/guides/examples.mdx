@@ -3,11 +3,13 @@ title: Examples
 description: The intentionally narrow example surface kept in this repository.
 ---
 
-The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app and one retained OpenAI-like mapper.
+The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app, one real OpenAI-compatible chat route, and one retained OpenAI-like mapper.
 
 ## Current Files
 
 - `examples/src/App.tsx`: local examples app shell and route registry
+- `examples/chat/ChatExample.tsx`: `/chat` route that sends text prompts to the local Vite API proxy and renders streamed replies with `ChatRoot` plus `MessageList`
+- `examples/server/openai-compatible-chat.ts`: dev-server adapter that reads `.env`, calls an OpenAI-compatible Chat Completions stream, and emits canonical `UiStreamEvent` SSE frames
 - `examples/playground/App.tsx`: `/playground` route that maps OpenAI-like chunks into `UiStreamEvent` values and renders the resulting transcript
 - `examples/adapters/openai-like.ts`: reference-only mapper for an OpenAI-like stream shape
 
@@ -17,7 +19,17 @@ Run the examples app locally:
 pnpm dev:example
 ```
 
+The real chat route expects these local environment variables:
+
+```bash
+UINIFY_LLM_BASE_URL=https://api.openai.com/v1
+UINIFY_LLM_API_KEY=replace-me
+UINIFY_LLM_MODEL=gpt-4o-mini
+```
+
 ## How To Read The Example
+
+Use `/chat` to verify a real text-only chat flow. The browser posts messages to `/api/chat`; the Vite dev server keeps the API key server-side, maps the provider stream into `UiStreamEvent`, and streams those events back to the page.
 
 Use `/playground` as a smoke check for the public runtime and transcript renderer. Use the mapper as a reference for where protocol normalization should live.
 

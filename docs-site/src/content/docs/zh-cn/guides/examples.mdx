@@ -3,11 +3,13 @@ title: 示例
 description: 当前仓库中刻意收窄的 example surface。
 ---
 
-仓库不再保留推测性质的 app templates。当前 example surface 有意收窄为一个可运行 Vite examples app 和一个保留的 OpenAI-like mapper。
+仓库不再保留推测性质的 app templates。当前 example surface 有意收窄为一个可运行 Vite examples app、一个真实 OpenAI-compatible chat route 和一个保留的 OpenAI-like mapper。
 
 ## 当前文件
 
 - `examples/src/App.tsx`：本地 examples app shell 和路由注册
+- `examples/chat/ChatExample.tsx`：`/chat` 路由，把文本 prompt 发给本地 Vite API proxy，并用 `ChatRoot` 和 `MessageList` 渲染流式回复
+- `examples/server/openai-compatible-chat.ts`：dev-server adapter，读取 `.env`，调用 OpenAI-compatible Chat Completions stream，并输出规范化 `UiStreamEvent` SSE frames
 - `examples/playground/App.tsx`：`/playground` 路由，把 OpenAI-like chunks 映射成 `UiStreamEvent`，再渲染 runtime transcript
 - `examples/adapters/openai-like.ts`：OpenAI-like stream shape 的 reference-only mapper
 
@@ -17,7 +19,17 @@ description: 当前仓库中刻意收窄的 example surface。
 pnpm dev:example
 ```
 
+真实 chat 路由需要这些本地环境变量：
+
+```bash
+UINIFY_LLM_BASE_URL=https://api.openai.com/v1
+UINIFY_LLM_API_KEY=replace-me
+UINIFY_LLM_MODEL=gpt-4o-mini
+```
+
 ## 如何阅读示例
+
+用 `/chat` 验证真实 text-only chat flow。浏览器把消息 POST 到 `/api/chat`；Vite dev server 把 API key 留在服务端，把 provider stream 映射成 `UiStreamEvent`，再把这些事件流式发回页面。
 
 把 `/playground` 当作 public runtime 和 transcript renderer 的 smoke check。把 mapper 当作协议规范化应该放在什么位置的参考。
 

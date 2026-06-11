@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { ChatExample } from "../chat/ChatExample"
 import { ExamplePlayground } from "../playground/App"
 
 type ExampleRoute = {
@@ -9,6 +10,12 @@ type ExampleRoute = {
 }
 
 const routes: ExampleRoute[] = [
+  {
+    path: "/chat",
+    title: "AI chat",
+    description: "A real OpenAI-compatible chat page rendered with uinify.",
+    Component: ChatExample,
+  },
   {
     path: "/playground",
     title: "OpenAI-like stream mapper",
