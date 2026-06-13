@@ -5,6 +5,7 @@ import {
   LIVE_CHAT_IMAGE_MAX_BYTES,
   readFileAsDataUrl,
 } from "../../examples/src/chat/shared/files"
+import { createExampleId } from "../../examples/src/chat/shared/ids"
 
 function createAttachment(file: File, overrides: Partial<UiComposerAttachment> = {}): UiComposerAttachment {
   return {
@@ -19,6 +20,16 @@ function createAttachment(file: File, overrides: Partial<UiComposerAttachment> =
 }
 
 describe("chat file helpers", () => {
+  it("createExampleId prefixes random UUIDs", () => {
+    const randomUUID = vi
+      .spyOn(crypto, "randomUUID")
+      .mockReturnValue("00000000-0000-4000-8000-000000000000")
+
+    expect(createExampleId("message")).toBe("message-00000000-0000-4000-8000-000000000000")
+
+    randomUUID.mockRestore()
+  })
+
   it("image validator accepts a normal image file", () => {
     const validator = createImageAttachmentValidator()
     const attachment = createAttachment(new File(["pixels"], "photo.png", { type: "image/png" }))
@@ -71,7 +82,7 @@ describe("chat file helpers", () => {
     ])
   })
 
-  it("isUploadedImageAttachment returns true only for uploaded attachments with a string dataUrl", () => {
+  it("isUploadedImageAttachment accepts uploaded image attachments with data image base64 URLs", () => {
     const file = new File(["pixels"], "photo.png", { type: "image/png" })
     const uploadedWithDataUrl = createAttachment(file, { status: "uploaded" }) as UiComposerAttachment & {
       dataUrl: string
@@ -79,6 +90,11 @@ describe("chat file helpers", () => {
     uploadedWithDataUrl.dataUrl = "data:image/png;base64,cGl4ZWxz"
 
     expect(isUploadedImageAttachment(uploadedWithDataUrl)).toBe(true)
+  })
+
+  it("isUploadedImageAttachment rejects attachments that are not uploaded", () => {
+    const file = new File(["pixels"], "photo.png", { type: "image/png" })
+
     expect(
       isUploadedImageAttachment(
         Object.assign(createAttachment(file, { status: "queued" }), {
@@ -86,10 +102,39 @@ describe("chat file helpers", () => {
         }),
       ),
     ).toBe(false)
+  })
+
+  it("isUploadedImageAttachment rejects uploaded attachments without a data URL string", () => {
+    const file = new File(["pixels"], "photo.png", { type: "image/png" })
+
     expect(isUploadedImageAttachment(createAttachment(file, { status: "uploaded" }))).toBe(false)
     expect(
       isUploadedImageAttachment(
         Object.assign(createAttachment(file, { status: "uploaded" }), { dataUrl: 42 }),
+      ),
+    ).toBe(false)
+  })
+
+  it("isUploadedImageAttachment rejects uploaded images with non-data-url strings", () => {
+    const file = new File(["pixels"], "photo.png", { type: "image/png" })
+
+    expect(
+      isUploadedImageAttachment(
+        Object.assign(createAttachment(file, { status: "uploaded" }), {
+          dataUrl: "https://example.test/photo.png",
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it("isUploadedImageAttachment rejects non-image attachments with data image URLs", () => {
+    const file = new File(["notes"], "notes.txt", { type: "text/plain" })
+
+    expect(
+      isUploadedImageAttachment(
+        Object.assign(createAttachment(file, { status: "uploaded" }), {
+          dataUrl: "data:image/png;base64,bm90ZXM=",
+        }),
       ),
     ).toBe(false)
   })

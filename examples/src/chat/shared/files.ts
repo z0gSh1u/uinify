@@ -3,13 +3,27 @@ import type { LexicalComposerProps, UiComposerAttachment } from "../../../../src
 export const LIVE_CHAT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
 
 export type LiveChatImageAttachment = UiComposerAttachment & {
+  status: "uploaded"
   dataUrl: string
 }
+
+const IMAGE_DATA_URL_PATTERN = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]*={0,2}$/i
 
 export function isUploadedImageAttachment(
   attachment: UiComposerAttachment,
 ): attachment is LiveChatImageAttachment {
-  return attachment.status === "uploaded" && typeof (attachment as { dataUrl?: unknown }).dataUrl === "string"
+  const dataUrl = (attachment as { dataUrl?: unknown }).dataUrl
+
+  return (
+    attachment.status === "uploaded" &&
+    isImageAttachment(attachment) &&
+    typeof dataUrl === "string" &&
+    IMAGE_DATA_URL_PATTERN.test(dataUrl)
+  )
+}
+
+function isImageAttachment(attachment: UiComposerAttachment) {
+  return attachment.mimeType?.startsWith("image/") === true || attachment.file.type.startsWith("image/")
 }
 
 export function createImageAttachmentValidator(): NonNullable<LexicalComposerProps["onAttachmentValidation"]> {
