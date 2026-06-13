@@ -2,6 +2,7 @@ import {
   buildOpenAICompatibleChatRequest,
   createOpenAICompatibleChatAdapter,
   resolveChatCompletionsUrl,
+  validateChatRequestBody,
 } from "../../examples/server/openai-compatible-chat"
 
 describe("OpenAI-compatible chat example adapter", () => {
@@ -83,5 +84,116 @@ describe("OpenAI-compatible chat example adapter", () => {
       stream: true,
       messages: [{ role: "user", content: "Say hello" }],
     })
+  })
+
+  it("accepts string chat request messages", () => {
+    expect(
+      validateChatRequestBody({
+        messages: [{ role: "user", content: "Say hello" }],
+      }),
+    ).toBe(true)
+  })
+
+  it("accepts multimodal user messages with text and image data URL parts", () => {
+    expect(
+      validateChatRequestBody({
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Describe this image" },
+              {
+                type: "image_url",
+                image_url: { url: "data:image/png;base64,aGVsbG8=" },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true)
+  })
+
+  it.each([
+    {
+      name: "empty string content",
+      body: { messages: [{ role: "user", content: "  " }] },
+    },
+    {
+      name: "empty array content",
+      body: { messages: [{ role: "user", content: [] }] },
+    },
+    {
+      name: "empty text part",
+      body: {
+        messages: [{ role: "user", content: [{ type: "text", text: "  " }] }],
+      },
+    },
+    {
+      name: "unknown content part type",
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "audio", url: "data:audio/mp3;base64,aGVsbG8=" }],
+          },
+        ],
+      },
+    },
+    {
+      name: "image URL part without image_url object",
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "image_url", url: "data:image/png;base64,aGVsbG8=" }],
+          },
+        ],
+      },
+    },
+    {
+      name: "image URL part without url text",
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "image_url", image_url: { url: "" } }],
+          },
+        ],
+      },
+    },
+    {
+      name: "image URL part with non-image data URL",
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: "data:text/plain;base64,aGVsbG8=" },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      name: "image URL part without base64 marker",
+      body: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: "data:image/png,aGVsbG8=" },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ])("rejects invalid chat request body with $name", ({ body }) => {
+    expect(validateChatRequestBody(body)).toBe(false)
   })
 })

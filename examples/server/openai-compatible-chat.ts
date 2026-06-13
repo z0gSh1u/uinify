@@ -3,14 +3,20 @@ import { createAdapterRunner, type UiStreamEvent } from "../../src"
 import { readSSEStream } from "../../src/sse"
 import type { Plugin } from "vite"
 
+export type OpenAICompatibleChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+
 export type OpenAICompatibleChatMessage = {
   role: "system" | "user" | "assistant"
-  content: string
+  content: string | OpenAICompatibleChatContentPart[]
 }
 
-export type OpenAICompatibleChatRequestBody = {
+export type OpenAICompatibleChatRequest = {
   messages: OpenAICompatibleChatMessage[]
 }
+
+export type OpenAICompatibleChatRequestBody = OpenAICompatibleChatRequest
 
 export type OpenAICompatibleChatEnv = {
   baseUrl: string
@@ -187,37 +193,69 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return body ? JSON.parse(body) : null
 }
 
-function validateChatRequestBody(body: unknown): OpenAICompatibleChatRequestBody | null {
-  if (!body || typeof body !== "object" || !("messages" in body) || !Array.isArray(body.messages)) {
-    return null
+export function isNonEmptyText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+export function isImageDataUrl(value: string): boolean {
+  return /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+={0,2}$/i.test(value.trim())
+}
+
+export function validateContentPart(part: unknown): part is OpenAICompatibleChatContentPart {
+  if (!part || typeof part !== "object" || !("type" in part)) {
+    return false
   }
 
-  const messages = body.messages
-    .map((message): OpenAICompatibleChatMessage | null => {
+  if (part.type === "text") {
+    return "text" in part && isNonEmptyText(part.text)
+  }
+
+  if (part.type !== "image_url" || !("image_url" in part)) {
+    return false
+  }
+
+  const imageUrl = part.image_url
+
+  return (
+    !!imageUrl &&
+    typeof imageUrl === "object" &&
+    "url" in imageUrl &&
+    typeof imageUrl.url === "string" &&
+    isImageDataUrl(imageUrl.url)
+  )
+}
+
+export function validateMessageContent(
+  content: unknown,
+): content is OpenAICompatibleChatMessage["content"] {
+  if (isNonEmptyText(content)) {
+    return true
+  }
+
+  return Array.isArray(content) && content.length > 0 && content.every(validateContentPart)
+}
+
+export function validateChatRequestBody(body: unknown): body is OpenAICompatibleChatRequest {
+  if (!body || typeof body !== "object" || !("messages" in body) || !Array.isArray(body.messages)) {
+    return false
+  }
+
+  return (
+    body.messages.length > 0 &&
+    body.messages.every((message): message is OpenAICompatibleChatMessage => {
       if (!message || typeof message !== "object") {
-        return null
+        return false
       }
 
       const role = "role" in message ? message.role : undefined
       const content = "content" in message ? message.content : undefined
 
-      if (
-        (role !== "system" && role !== "user" && role !== "assistant") ||
-        typeof content !== "string" ||
-        content.trim().length === 0
-      ) {
-        return null
-      }
-
-      return { role, content }
+      return (
+        (role === "system" || role === "user" || role === "assistant") &&
+        validateMessageContent(content)
+      )
     })
-    .filter((message): message is OpenAICompatibleChatMessage => message !== null)
-
-  if (messages.length === 0 || messages.length !== body.messages.length) {
-    return null
-  }
-
-  return { messages }
+  )
 }
 
 async function streamOpenAICompatibleChat(
@@ -295,9 +333,9 @@ export async function handleOpenAICompatibleChatRequest(
   }
 
   try {
-    const body = validateChatRequestBody(await readJsonBody(req))
+    const body = await readJsonBody(req)
 
-    if (!body) {
+    if (!validateChatRequestBody(body)) {
       sendJson(res, 400, { error: "Request body must include non-empty chat messages." })
       return
     }
