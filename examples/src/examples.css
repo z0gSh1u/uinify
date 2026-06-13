@@ -48,123 +48,80 @@ a {
 
 .examples-shell {
   display: grid;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-  gap: 20px;
-  width: min(1320px, calc(100vw - 48px));
-  min-height: calc(100vh - 48px);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(1440px, calc(100vw - 48px));
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 20px 0;
 }
 
-.examples-sidebar,
-.examples-main,
-.examples-not-found {
+.examples-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   min-width: 0;
+}
+
+.examples-brand {
+  color: #1f6feb;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.examples-brand:hover {
+  color: #174ea6;
+}
+
+.examples-github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #c8d4e5;
+  border-radius: 8px;
+  color: #25324a;
+  background: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  box-shadow: 0 8px 28px rgba(25, 36, 62, 0.08);
+}
+
+.examples-github-link:hover {
+  border-color: #8fb4e8;
+  color: #1f6feb;
+  background: #ffffff;
+}
+
+.examples-github-link:focus-visible {
+  outline: 2px solid #bfdbfe;
+  outline-offset: 2px;
+}
+
+.examples-github-link svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.examples-main {
+  min-width: 0;
+  min-height: 0;
   border: 1px solid #d7deea;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 16px 48px rgba(25, 36, 62, 0.08);
-}
-
-.examples-sidebar {
-  position: sticky;
-  top: 24px;
-  align-self: start;
   display: grid;
-  gap: 16px;
-  padding: 18px;
-}
-
-.examples-sidebar header {
-  padding-bottom: 18px;
-  border-bottom: 1px solid #e4e9f2;
-}
-
-.examples-sidebar header p {
-  margin: 0 0 6px;
-  color: #1f6feb;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.examples-sidebar h1 {
-  margin: 0;
-  color: #111827;
-  font-size: 1.35rem;
-  line-height: 1.2;
-}
-
-.examples-sidebar nav {
-  display: grid;
-  gap: 10px;
-}
-
-.examples-sidebar nav a {
-  display: grid;
-  gap: 6px;
-  padding: 11px 12px;
-  border: 1px solid #d7deea;
-  border-radius: 8px;
-  color: #25324a;
-  background: #ffffff;
-  text-decoration: none;
-}
-
-.examples-sidebar nav a:hover,
-.examples-sidebar nav a[aria-current="page"] {
-  border-color: #8fb4e8;
-  background: #edf5ff;
-}
-
-.examples-sidebar nav span {
-  font-size: 0.94rem;
-  font-weight: 800;
-}
-
-.examples-sidebar nav small {
-  color: #4b5565;
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.examples-main {
   overflow: hidden;
-}
-
-.examples-not-found {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  padding: 24px;
-}
-
-.examples-not-found p {
-  margin: 0;
-  color: #4b5565;
-}
-
-.examples-not-found button {
-  justify-self: start;
-  padding: 8px 10px;
-  border: 1px solid #c8d4e5;
-  border-radius: 8px;
-  color: #1f6feb;
-  background: #f8fbff;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 @media (max-width: 920px) {
   .examples-shell {
-    grid-template-columns: 1fr;
-    width: min(100% - 28px, 1320px);
-    min-height: calc(100vh - 28px);
+    width: min(100% - 28px, 1440px);
     padding: 14px 0;
-  }
-
-  .examples-sidebar {
-    position: static;
   }
 }

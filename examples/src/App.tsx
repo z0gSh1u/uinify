@@ -1,100 +1,40 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect } from "react"
 import { ChatExample } from "./chat/ChatExample"
 
-type ExampleRoute = {
-  path: string
-  title: string
-  description: string
-  Component: () => JSX.Element
-}
-
-const routes: ExampleRoute[] = [
-  {
-    path: "/chat",
-    title: "AI chat",
-    description: "A real OpenAI-compatible chat page rendered with uinify.",
-    Component: ChatExample,
-  },
-]
-
-function normalizePath(pathname: string) {
-  const normalized = pathname.replace(/\/+$/, "")
-  return normalized === "" ? "/" : normalized
-}
-
-function resolveRoute(pathname: string) {
-  return routes.find((route) => route.path === normalizePath(pathname))
-}
+const chatPath = "/chat"
+const githubUrl = "https://github.com/z0gSh1u/uinify"
 
 export function ExamplesApp() {
-  const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname))
-
   useEffect(() => {
-    const handlePopState = () => {
-      setPathname(normalizePath(window.location.pathname))
-    }
-
-    window.addEventListener("popstate", handlePopState)
-    return () => {
-      window.removeEventListener("popstate", handlePopState)
+    if (window.location.pathname !== chatPath) {
+      window.history.replaceState(null, "", chatPath)
     }
   }, [])
 
-  useEffect(() => {
-    if (pathname === "/") {
-      window.history.replaceState(null, "", routes[0].path)
-      setPathname(routes[0].path)
-    }
-  }, [pathname])
-
-  const activeRoute = useMemo(() => resolveRoute(pathname), [pathname])
-
-  const navigate = (path: string) => {
-    if (path === pathname) {
-      return
-    }
-
-    window.history.pushState(null, "", path)
-    setPathname(path)
-  }
-
   return (
     <div className="examples-shell">
-      <aside className="examples-sidebar" aria-label="Examples">
-        <header>
-          <p>uinify examples</p>
-          <h1>Examples</h1>
-        </header>
-
-        <nav aria-label="Example routes">
-          {routes.map((route) => (
-            <a
-              aria-current={activeRoute?.path === route.path ? "page" : undefined}
-              href={route.path}
-              key={route.path}
-              onClick={(event) => {
-                event.preventDefault()
-                navigate(route.path)
-              }}
-            >
-              <span>{route.title}</span>
-              <small>{route.description}</small>
-            </a>
-          ))}
-        </nav>
-      </aside>
-
+      <header className="examples-topbar">
+        <a className="examples-brand" href={chatPath}>
+          uinify examples
+        </a>
+        <a
+          aria-label="Open z0gSh1u/uinify on GitHub"
+          className="examples-github-link"
+          href={githubUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+            <path
+              clipRule="evenodd"
+              d="M12 1C5.9 1 1 5.9 1 12c0 4.9 3.2 9 7.6 10.5.6.1.8-.2.8-.5v-1.9c-3.1.7-3.8-1.3-3.8-1.3-.5-1.3-1.2-1.6-1.2-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1.2 2.6 2.9 1.8.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.4 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.5.1-3 0 0 .9-.3 3 1.1.9-.2 1.8-.4 2.7-.4s1.8.1 2.7.4c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.7.1 3 .7.8 1.1 1.8 1.1 3 0 4.2-2.6 5.1-5.1 5.4.4.3.8 1 .8 2.1v3c0 .3.2.6.8.5C19.8 21 23 16.9 23 12c0-6.1-4.9-11-11-11Z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </a>
+      </header>
       <main className="examples-main">
-        {activeRoute ? (
-          <activeRoute.Component />
-        ) : (
-          <section className="examples-not-found" aria-label="Example route not found">
-            <p>Example not found.</p>
-            <button type="button" onClick={() => navigate(routes[0].path)}>
-              Open chat
-            </button>
-          </section>
-        )}
+        <ChatExample />
       </main>
     </div>
   )
