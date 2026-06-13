@@ -32,7 +32,7 @@ export const SURFACE_GALLERY_ARTIFACT: UiArtifact = {
       kind: "structured",
       value: {
         transcript: "surface-gallery",
-        surfaces: ["attachments", "reasoning", "steps", "image", "artifact", "actions"],
+        surfaces: ["text", "attachments", "reasoning", "steps", "image", "artifact", "actions"],
         deterministic: true,
       },
     },

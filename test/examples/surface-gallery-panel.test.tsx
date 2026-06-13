@@ -34,7 +34,9 @@ afterEach(() => {
 describe("SurfaceGalleryPanel", () => {
   it("renders a deterministic transcript without calling the chat API", async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.fn()
+    const fetchMock = vi.fn(() => {
+      throw new Error("Surface gallery must not call fetch.")
+    })
 
     vi.stubGlobal("fetch", fetchMock)
     render(<SurfaceGalleryPanel />)
@@ -54,6 +56,28 @@ describe("SurfaceGalleryPanel", () => {
     expect(screen.getByText("Tool: image metadata lookup")).toBeInTheDocument()
     expect(screen.getByText("Planner: compose response outline")).toBeInTheDocument()
     expect(screen.getByText("Workflow: publish gallery artifact")).toBeInTheDocument()
+
+    const runningStep = screen.getByText("Tool: image metadata lookup").closest('[data-slot="step"]')
+    const completeStep = screen
+      .getByText("Planner: compose response outline")
+      .closest('[data-slot="step"]')
+    const errorStep = screen.getByText("Workflow: publish gallery artifact").closest('[data-slot="step"]')
+
+    expect(runningStep).toHaveAttribute("data-state", "running")
+    expect(runningStep).toHaveClass("surface-gallery-step")
+    expect(within(runningStep as HTMLElement).getByText("running")).toBeInTheDocument()
+    expect(completeStep).toHaveAttribute("data-state", "complete")
+    expect(within(completeStep as HTMLElement).getByText("complete")).toBeInTheDocument()
+    expect(
+      within(completeStep as HTMLElement).getByText(
+        "Reasoning, steps, image, artifact, attachment, and action surfaces included.",
+      ),
+    ).toBeInTheDocument()
+    expect(errorStep).toHaveAttribute("data-state", "error")
+    expect(within(errorStep as HTMLElement).getByText("error")).toBeInTheDocument()
+    expect(
+      within(errorStep as HTMLElement).getByText("Publishing is disabled for deterministic fixtures."),
+    ).toBeInTheDocument()
 
     expect(screen.getByRole("status")).toHaveTextContent("Latest action: none")
     expect(screen.queryByText(/reasoning trace/i)).not.toBeInTheDocument()
@@ -81,6 +105,14 @@ describe("SurfaceGalleryPanel", () => {
     expect(within(artifact as HTMLElement).getByRole("button", { name: "Source" })).toBeInTheDocument()
     expect(within(artifact as HTMLElement).getByText(/Preview surface tabs/i)).toBeInTheDocument()
 
+    await user.click(within(artifact as HTMLElement).getByRole("button", { name: "JSON" }))
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Latest action: opened JSON view for Surface gallery bundle",
+    )
+    expect(within(artifact as HTMLElement).getByText(/"deterministic": true/)).toBeInTheDocument()
+    expect(within(artifact as HTMLElement).getByText(/"text"/)).toBeInTheDocument()
+
     await user.click(within(artifact as HTMLElement).getByRole("button", { name: "Source" }))
 
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -93,5 +125,6 @@ describe("SurfaceGalleryPanel", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Latest action: retry message on assistant-gallery-message",
     )
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
