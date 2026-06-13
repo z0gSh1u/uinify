@@ -27,7 +27,7 @@
 
 ## Product Boundaries
 - The docs intentionally keep the recommended adoption surface narrow: `createChatRuntime`, `UiStreamEvent`, `createAdapterRunner`, `ChatRoot`, `MessageList`, and the documented styling hooks.
-- `examples/adapters/openai-like.ts` is a reference-only mapper example. Do not treat it as a stable compatibility layer or copy its shape into public API decisions.
+- `examples/server/openai-compatible-chat.ts` is the only retained example adapter and exists to power the local `/chat` example route.
 - Styling stability is documented around `uinify/styles.css` tokens, `data-slot` regions, and `slotClassNames`; prefer those before changing renderer structure.
 
 ## Docs Site
@@ -39,8 +39,7 @@
 
 ## Docs And Example Coupling
 - The examples app in `examples/src/App.tsx` is docs-backed product surface, not throwaway demo code.
-- `examples/chat/ChatExample.tsx` is the real OpenAI-compatible chat route. Keep API keys server-side through `examples/server/openai-compatible-chat.ts`.
-- `examples/playground/App.tsx` is one route in that app and should stay focused on the retained stream-mapping example.
+- `examples/src/chat/ChatExample.tsx` is the real OpenAI-compatible chat route. Keep API keys server-side through `examples/server/openai-compatible-chat.ts`.
 - If example route labels or paths change, keep `examples/src/App.tsx` and the examples guide in sync.
 
 ## Verification Expectations

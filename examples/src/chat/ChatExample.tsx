@@ -1,7 +1,7 @@
 import { FormEvent, KeyboardEvent, useRef, useState } from "react"
-import { createChatRuntime, type UiStreamEvent } from "../../src"
-import { ChatRoot, MessageList } from "../../src/react"
-import { readSSEStream } from "../../src/sse"
+import { createChatRuntime, type UiStreamEvent } from "../../../src"
+import { ChatRoot, MessageList } from "../../../src/react"
+import { readSSEStream } from "../../../src/sse"
 import "./chat.css"
 
 type ApiMessage = {

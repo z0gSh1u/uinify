@@ -36,8 +36,8 @@ Commands 是稳定的 composer input intent。Steps 是稳定的 transcript outp
 
 仓库中的一些代码很适合作为参考，但不应该被当成稳定 integration contract。
 
-- `examples/adapters/` 下的文件都是 reference-only examples。
-- `custom-minimal`、`agent-like` 和 `openai-like` 等示例 adapters 展示的是如何使用稳定 adapter helpers，它们本身不是受支持的兼容层。
+- `examples/server/openai-compatible-chat.ts` 是本地 examples app 的 reference-only example code。
+- 这个 example adapter 展示如何把 provider stream 映射成 `UiStreamEvent`；它本身不是受支持的 OpenAI 兼容层。
 - 当前 renderer shells 和 examples 背后的内部实现细节，可能会随着 package 增加更多官方 docs 和 extension points 而演进。
 
 可以用 reference-only surface 理解模式、命名和取舍。不要像依赖 versioned APIs 一样，把生产集成耦合到这些文件上。

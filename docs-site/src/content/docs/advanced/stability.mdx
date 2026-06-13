@@ -36,8 +36,8 @@ Commands are stable as composer input intent. Steps are stable as transcript out
 
 Some code in the repository is intentionally useful as a reference, but it should not be treated as a stable integration contract.
 
-- Files under `examples/adapters/` are reference-only examples.
-- Example adapters such as `custom-minimal`, `agent-like`, and `openai-like` show how to use the stable adapter helpers, not supported compatibility layers by themselves.
+- `examples/server/openai-compatible-chat.ts` is reference-only example code for the local examples app.
+- The example adapter shows how to map a provider stream into `UiStreamEvent`; it is not a supported OpenAI compatibility layer by itself.
 - Internal implementation details behind the current renderer shells and examples may evolve as the package adds more official docs and extension points.
 
 Use the reference-only surface to understand patterns, naming, and trade-offs. Do not couple production integrations to those files as if they were versioned APIs.

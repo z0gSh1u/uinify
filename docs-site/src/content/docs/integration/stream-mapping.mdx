@@ -5,7 +5,7 @@ description: Map your backend protocol into UiStreamEvent before it reaches the 
 
 Map your host or backend protocol into `UiStreamEvent` before it reaches the runtime. This keeps `uinify` focused on chat state and rendering instead of vendor-specific transport details.
 
-See the retained reference mapper in `examples/adapters/openai-like.ts`.
+The examples app keeps the concrete mapping logic in `examples/server/openai-compatible-chat.ts`, where the local dev server maps an OpenAI-compatible stream into canonical `UiStreamEvent` frames.
 
 If your transport is Server-Sent Events, pair this page with [SSE Integration](/integration/sse/). For the runnable examples app, see [Examples](/guides/examples/).
 

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChatExample } from "../chat/ChatExample"
-import { ExamplePlayground } from "../playground/App"
+import { ChatExample } from "./chat/ChatExample"
 
 type ExampleRoute = {
   path: string
@@ -15,12 +14,6 @@ const routes: ExampleRoute[] = [
     title: "AI chat",
     description: "A real OpenAI-compatible chat page rendered with uinify.",
     Component: ChatExample,
-  },
-  {
-    path: "/playground",
-    title: "OpenAI-like stream mapper",
-    description: "Map a reference stream into UiStreamEvent values and render the transcript.",
-    Component: ExamplePlayground,
   },
 ]
 
@@ -98,7 +91,7 @@ export function ExamplesApp() {
           <section className="examples-not-found" aria-label="Example route not found">
             <p>Example not found.</p>
             <button type="button" onClick={() => navigate(routes[0].path)}>
-              Open playground
+              Open chat
             </button>
           </section>
         )}

@@ -16,24 +16,24 @@ describe("examples Vite app", () => {
     expect(config).not.toContain('"examples/playground"')
   })
 
-  it("mounts playground as an app route instead of the Vite entry root", () => {
+  it("keeps the real chat example as the only examples app route", () => {
     const index = readRepoFile("examples/index.html")
-    const app = readRepoFile("examples/src/App.tsx")
-
-    expect(index).toContain('src="./src/main.tsx"')
-    expect(app).toContain('path: "/playground"')
-    expect(app).toContain("ExamplePlayground")
-    expect(app).not.toContain("docs-site")
-    expect(existsSync(resolve(repoRoot, "examples/playground/index.html"))).toBe(false)
-  })
-
-  it("keeps the real chat example as an examples app route", () => {
     const app = readRepoFile("examples/src/App.tsx")
     const config = readRepoFile("vite.example.config.ts")
 
+    expect(index).toContain('src="./src/main.tsx"')
     expect(app).toContain('path: "/chat"')
     expect(app).toContain("ChatExample")
+    expect(app).not.toContain('path: "/playground"')
+    expect(app).not.toContain("ExamplePlayground")
+    expect(app).not.toContain("docs-site")
     expect(app).not.toContain("UINIFY_LLM_API_KEY")
     expect(config).toContain("createOpenAICompatibleChatPlugin")
+    expect(existsSync(resolve(repoRoot, "examples/src/chat/ChatExample.tsx"))).toBe(true)
+    expect(existsSync(resolve(repoRoot, "examples/chat"))).toBe(false)
+    expect(existsSync(resolve(repoRoot, "examples/server/openai-compatible-chat.ts"))).toBe(true)
+    expect(existsSync(resolve(repoRoot, "examples/playground"))).toBe(false)
+    expect(existsSync(resolve(repoRoot, "examples/adapters"))).toBe(false)
+    expect(existsSync(resolve(repoRoot, "examples/playground/index.html"))).toBe(false)
   })
 })

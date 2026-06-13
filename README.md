@@ -26,7 +26,7 @@ For first-time adoption, the recommended default setup is to import `uinify/styl
 
 Stable styling hooks are available through documented `data-slot` regions, `slotClassNames`, and the `--uinify-*` tokens in `uinify/styles.css`.
 
-The examples app is intentionally narrow. Its `/chat` route runs a real OpenAI-compatible text chat through a local Vite API proxy, and `/playground` demonstrates the retained OpenAI-like reference mapper in `examples/adapters/openai-like.ts`. Run it with `pnpm dev:example`.
+The examples app is intentionally narrow. Its `/chat` route runs a real OpenAI-compatible text chat through a local Vite API proxy and can be run with `pnpm dev:example`.
 
 ## Reference-only Surface
 

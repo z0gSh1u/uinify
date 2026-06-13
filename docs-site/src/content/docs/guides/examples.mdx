@@ -3,15 +3,13 @@ title: Examples
 description: The intentionally narrow example surface kept in this repository.
 ---
 
-The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app, one real OpenAI-compatible chat route, and one retained OpenAI-like mapper.
+The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app with one real OpenAI-compatible chat route.
 
 ## Current Files
 
 - `examples/src/App.tsx`: local examples app shell and route registry
-- `examples/chat/ChatExample.tsx`: `/chat` route that sends text prompts to the local Vite API proxy and renders streamed replies with `ChatRoot` plus `MessageList`
+- `examples/src/chat/ChatExample.tsx`: `/chat` route that sends text prompts to the local Vite API proxy and renders streamed replies with `ChatRoot` plus `MessageList`
 - `examples/server/openai-compatible-chat.ts`: dev-server adapter that reads `.env`, calls an OpenAI-compatible Chat Completions stream, and emits canonical `UiStreamEvent` SSE frames
-- `examples/playground/App.tsx`: `/playground` route that maps OpenAI-like chunks into `UiStreamEvent` values and renders the resulting transcript
-- `examples/adapters/openai-like.ts`: reference-only mapper for an OpenAI-like stream shape
 
 Run the examples app locally:
 
@@ -31,9 +29,7 @@ UINIFY_LLM_MODEL=gpt-4o-mini
 
 Use `/chat` to verify a real text-only chat flow. The browser posts messages to `/api/chat`; the Vite dev server keeps the API key server-side, maps the provider stream into `UiStreamEvent`, and streams those events back to the page.
 
-Use `/playground` as a smoke check for the public runtime and transcript renderer. Use the mapper as a reference for where protocol normalization should live.
-
-Do not treat the mapper as a supported OpenAI compatibility layer. Real products should map their own backend payloads into `UiStreamEvent` at the host boundary.
+Do not treat the dev-server adapter as a supported OpenAI compatibility layer. Real products should map their own backend payloads into `UiStreamEvent` at the host boundary.
 
 ## Where To Go Next
 
