@@ -3,12 +3,14 @@ title: 示例
 description: 当前仓库中刻意收窄的 example surface。
 ---
 
-仓库不再保留推测性质的 app templates。当前 example surface 有意收窄为一个可运行 Vite examples app，里面只有一个真实 OpenAI-compatible chat route。
+仓库不再保留推测性质的 app templates。当前 example surface 有意收窄为一个可运行 Vite examples app，里面只有一个 `/chat` route：左侧是真实 OpenAI-compatible 多模态 chat，右侧是确定性的 UI surface gallery。
 
 ## 当前文件
 
-- `examples/src/App.tsx`：本地 examples app shell 和路由注册
-- `examples/src/chat/ChatExample.tsx`：`/chat` 路由，把文本 prompt 发给本地 Vite API proxy，并用 `ChatRoot` 和 `MessageList` 渲染流式回复
+- `examples/src/App.tsx`：本地 examples app shell，只有一个 `/chat` route
+- `examples/src/chat/ChatExample.tsx`：live chat panel 和 deterministic surface gallery 的组合层
+- `examples/src/chat/live/LiveChatPanel.tsx`：真实 OpenAI-compatible 多模态 chat 示例，使用 `LexicalComposer`、图片附件、commands、`ChatRoot` 和 `MessageList`
+- `examples/src/chat/gallery/SurfaceGalleryPanel.tsx`：确定性 transcript，不调用 API，用于展示 reasoning、steps、images、artifacts、attachments、styling slots 和 action handlers
 - `examples/server/openai-compatible-chat.ts`：dev-server adapter，读取 `.env`，调用 OpenAI-compatible Chat Completions stream，并输出规范化 `UiStreamEvent` SSE frames
 
 本地运行 examples app：
@@ -17,7 +19,7 @@ description: 当前仓库中刻意收窄的 example surface。
 pnpm dev:example
 ```
 
-真实 chat 路由需要这些本地环境变量：
+live chat panel 需要这些本地环境变量：
 
 ```bash
 UINIFY_LLM_BASE_URL=https://api.openai.com/v1
@@ -27,7 +29,10 @@ UINIFY_LLM_MODEL=gpt-4o-mini
 
 ## 如何阅读示例
 
-用 `/chat` 验证真实 text-only chat flow。浏览器把消息 POST 到 `/api/chat`；Vite dev server 把 API key 留在服务端，把 provider stream 映射成 `UiStreamEvent`，再把这些事件流式发回页面。
+阅读 `/chat` 时可以分成两块：
+
+- 左侧 panel 验证真实链路。浏览器把文本、选中的 slash/mention commands、上传图片的 data URL 提交到 `/api/chat`；Vite dev server 把 API key 留在服务端，把 provider stream 映射成 `UiStreamEvent`，再把这些事件流式发回页面。
+- 右侧 panel 是确定性展示。它不调用 `fetch`；而是预加载一个 transcript，用来展示 attachment states、reasoning disclosure、running/complete/error steps、image part、artifact tabs、styling hooks 和 action payloads。
 
 不要把这个 dev-server adapter 当成受支持的 OpenAI 兼容层。真实产品应该在宿主边界把自己的后端 payloads 映射成 `UiStreamEvent`。
 

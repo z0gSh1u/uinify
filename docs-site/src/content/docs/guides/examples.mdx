@@ -3,12 +3,14 @@ title: Examples
 description: The intentionally narrow example surface kept in this repository.
 ---
 
-The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app with one real OpenAI-compatible chat route.
+The repository no longer keeps speculative app templates. The example surface is intentionally narrow: one runnable Vite examples app with one `/chat` route that combines a live OpenAI-compatible multimodal chat panel with a deterministic UI surface gallery.
 
 ## Current Files
 
-- `examples/src/App.tsx`: local examples app shell and route registry
-- `examples/src/chat/ChatExample.tsx`: `/chat` route that sends text prompts to the local Vite API proxy and renders streamed replies with `ChatRoot` plus `MessageList`
+- `examples/src/App.tsx`: local examples app shell for the single `/chat` route
+- `examples/src/chat/ChatExample.tsx`: composition layer for the live chat panel and the deterministic surface gallery
+- `examples/src/chat/live/LiveChatPanel.tsx`: real OpenAI-compatible multimodal chat example using `LexicalComposer`, image attachments, commands, `ChatRoot`, and `MessageList`
+- `examples/src/chat/gallery/SurfaceGalleryPanel.tsx`: deterministic transcript that exercises reasoning, steps, images, artifacts, attachments, styling slots, and action handlers without calling the API
 - `examples/server/openai-compatible-chat.ts`: dev-server adapter that reads `.env`, calls an OpenAI-compatible Chat Completions stream, and emits canonical `UiStreamEvent` SSE frames
 
 Run the examples app locally:
@@ -17,7 +19,7 @@ Run the examples app locally:
 pnpm dev:example
 ```
 
-The real chat route expects these local environment variables:
+The live chat panel expects these local environment variables:
 
 ```bash
 UINIFY_LLM_BASE_URL=https://api.openai.com/v1
@@ -27,7 +29,10 @@ UINIFY_LLM_MODEL=gpt-4o-mini
 
 ## How To Read The Example
 
-Use `/chat` to verify a real text-only chat flow. The browser posts messages to `/api/chat`; the Vite dev server keeps the API key server-side, maps the provider stream into `UiStreamEvent`, and streams those events back to the page.
+Use `/chat` in two passes:
+
+- The left panel verifies the live flow. The browser submits text, selected slash/mention commands, and uploaded image data URLs to `/api/chat`; the Vite dev server keeps the API key server-side, maps the provider stream into `UiStreamEvent`, and streams those events back to the page.
+- The right panel is deterministic. It does not call `fetch`; it preloads a transcript that shows attachment states, reasoning disclosure, running/complete/error steps, an image part, artifact tabs, styling hooks, and action payloads.
 
 Do not treat the dev-server adapter as a supported OpenAI compatibility layer. Real products should map their own backend payloads into `UiStreamEvent` at the host boundary.
 
