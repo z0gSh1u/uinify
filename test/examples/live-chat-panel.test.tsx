@@ -68,6 +68,22 @@ function createSSEStream(events: string[]) {
   })
 }
 
+function createFailingSSEStream(events: string[], error: Error) {
+  let index = 0
+
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (index < events.length) {
+        controller.enqueue(new TextEncoder().encode(events[index]))
+        index += 1
+        return
+      }
+
+      controller.error(error)
+    },
+  })
+}
+
 function uiFrame(data: unknown) {
   return `event: ui\ndata: ${JSON.stringify(data)}\n\n`
 }
@@ -160,5 +176,97 @@ describe("LiveChatPanel", () => {
     })
     expect(await screen.findByText("Hello live chat")).toBeInTheDocument()
     expect(await screen.findByText("Hello from the assistant.")).toBeInTheDocument()
+  })
+
+  it("recovers failed assistant streams and keeps visible user turns in request history", async () => {
+    const user = userEvent.setup()
+    const responses = [
+      new Response(
+        createFailingSSEStream(
+          [
+            uiFrame({
+              type: "message.started",
+              messageId: "assistant-failed",
+              role: "assistant",
+            }),
+          ],
+          new Error("Stream connection lost."),
+        ),
+      ),
+      new Response(
+        createSSEStream([
+          uiFrame({
+            type: "message.started",
+            messageId: "assistant-recovered",
+            role: "assistant",
+          }),
+          uiFrame({
+            type: "part.text.delta",
+            messageId: "assistant-recovered",
+            partId: "assistant-recovered-text",
+            delta: "Recovered.",
+          }),
+          uiFrame({
+            type: "message.completed",
+            messageId: "assistant-recovered",
+          }),
+        ]),
+      ),
+    ]
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+      const response = responses.shift()
+
+      if (!response) {
+        throw new Error("Unexpected fetch call.")
+      }
+
+      return response
+    })
+    const readRequestMessages = (callIndex: number) => {
+      const request = fetchMock.mock.calls[callIndex]?.[1] as RequestInit
+
+      return JSON.parse(String(request.body)).messages
+    }
+
+    vi.stubGlobal("fetch", fetchMock)
+    const { container } = render(<LiveChatPanel />)
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "First turn")
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    expect(await screen.findByText("Stream connection lost.")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(container.querySelector('[data-message-role="assistant"]')).toHaveAttribute(
+        "data-state",
+        "error",
+      )
+    })
+
+    setEditorText(textbox, "Second turn")
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+    expect(readRequestMessages(0)).toEqual([{ role: "user", content: "First turn" }])
+    expect(readRequestMessages(1)).toEqual([
+      { role: "user", content: "First turn" },
+      { role: "user", content: "Second turn" },
+    ])
+    expect(await screen.findByText("Recovered.")).toBeInTheDocument()
+  })
+
+  it("narrows mention commands by prefixed labels", async () => {
+    render(<LiveChatPanel />)
+
+    const textbox = screen.getByRole("textbox", { name: "Message" })
+
+    setEditorText(textbox, "@v")
+
+    expect(await screen.findByRole("button", { name: "@vision" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "@writer" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "@planner" })).not.toBeInTheDocument()
   })
 })

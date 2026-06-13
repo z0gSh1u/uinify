@@ -216,6 +216,8 @@ export function LiveChatPanel() {
       })
       let assistantText = ""
       let assistantFailed = false
+      let activeAssistantMessageId: string | null = null
+      let activeAssistantSettled = false
 
       setError(null)
       setIsStreaming(true)
@@ -225,6 +227,7 @@ export function LiveChatPanel() {
         text,
         images,
       })
+      historyRef.current = requestMessages
 
       try {
         const response = await fetch("/api/chat", {
@@ -243,11 +246,21 @@ export function LiveChatPanel() {
         await readUiEventStream(response, (event) => {
           runtime.dispatch(event)
 
-          if (event.type === "part.text.delta") {
+          if (event.type === "message.started" && event.role === "assistant") {
+            activeAssistantMessageId = event.messageId
+            activeAssistantSettled = false
+          }
+
+          if (event.type === "part.text.delta" && event.messageId === activeAssistantMessageId) {
             assistantText += event.delta
           }
 
-          if (event.type === "message.failed") {
+          if (event.type === "message.completed" && event.messageId === activeAssistantMessageId) {
+            activeAssistantSettled = true
+          }
+
+          if (event.type === "message.failed" && event.messageId === activeAssistantMessageId) {
+            activeAssistantSettled = true
             assistantFailed = true
             setError(event.error)
           }
@@ -259,7 +272,17 @@ export function LiveChatPanel() {
             : requestMessages
         }
       } catch (nextError) {
-        setError(readErrorMessage(nextError, "Chat request failed."))
+        const errorMessage = readErrorMessage(nextError, "Chat request failed.")
+
+        if (activeAssistantMessageId && !activeAssistantSettled) {
+          runtime.dispatch({
+            type: "message.failed",
+            messageId: activeAssistantMessageId,
+            error: errorMessage,
+          })
+        }
+
+        setError(errorMessage)
       } finally {
         setIsStreaming(false)
       }
