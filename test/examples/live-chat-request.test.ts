@@ -1,5 +1,6 @@
 import type { UiComposerCommandSelection } from "../../src/composer/lexical"
 import type { LiveChatImageAttachment } from "../../examples/src/chat/shared/files"
+import { LIVE_CHAT_COMMANDS } from "../../examples/src/chat/live/live-chat-commands"
 import type { LiveChatHistoryMessage } from "../../examples/src/chat/live/live-chat-model"
 import {
   buildLiveChatRequestMessages,
@@ -42,6 +43,24 @@ function createImageAttachment(
 }
 
 describe("live chat request helpers", () => {
+  it("exports the expected live chat command catalog", () => {
+    expect(
+      LIVE_CHAT_COMMANDS.map((command) => ({
+        id: command.id,
+        kind: command.kind,
+        label: command.label,
+        insertText: command.insertText,
+      })),
+    ).toEqual([
+      { id: "slash-analyze", kind: "slash", label: "Analyze image", insertText: "/analyze " },
+      { id: "slash-summarize", kind: "slash", label: "Summarize", insertText: "/summarize " },
+      { id: "slash-extract", kind: "slash", label: "Extract details", insertText: "/extract " },
+      { id: "mention-vision", kind: "agent", label: "@vision", insertText: "@vision " },
+      { id: "mention-writer", kind: "agent", label: "@writer", insertText: "@writer " },
+      { id: "mention-planner", kind: "agent", label: "@planner", insertText: "@planner " },
+    ])
+  })
+
   it("plain text request appends a string user message", () => {
     const history: LiveChatHistoryMessage[] = [{ role: "assistant", content: "Welcome back." }]
 

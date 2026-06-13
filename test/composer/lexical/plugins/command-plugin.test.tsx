@@ -37,6 +37,32 @@ describe("CommandPlugin", () => {
     expect(filterCommandsForQuery(commands, "@res").map((command) => command.id)).toEqual(["agent-research"])
   })
 
+  it("filters commands whose labels include their trigger prefix", () => {
+    const prefixedCommands = [
+      {
+        id: "mention-vision",
+        kind: "agent",
+        label: "@vision",
+        insertText: "@vision ",
+        trigger: "@",
+      },
+      {
+        id: "slash-analyze",
+        kind: "slash",
+        label: "/analyze",
+        insertText: "/analyze ",
+        trigger: "/",
+      },
+    ] satisfies UiComposerCommand[]
+
+    expect(filterCommandsForQuery(prefixedCommands, "@v").map((command) => command.id)).toEqual([
+      "mention-vision",
+    ])
+    expect(filterCommandsForQuery(prefixedCommands, "/a").map((command) => command.id)).toEqual([
+      "slash-analyze",
+    ])
+  })
+
   it("derives the trigger from explicit trigger or insertText", () => {
     expect(readCommandTrigger({ id: "a", kind: "custom", label: "a", insertText: "/a " })).toBe("/")
     expect(readCommandTrigger({ id: "b", kind: "custom", label: "b", insertText: "@b " })).toBe("@")

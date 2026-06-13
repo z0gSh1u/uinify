@@ -52,7 +52,7 @@ export function filterCommandsForQuery(commands: UiComposerCommand[], query: str
       return false
     }
 
-    return command.label.toLowerCase().startsWith(normalizedQuery)
+    return normalizeSearchText(command.label, trigger).startsWith(normalizedQuery)
   })
 }
 
@@ -64,4 +64,10 @@ export function readCommandTrigger(command: UiComposerCommand): UiComposerComman
   const firstCharacter = command.insertText.trim()[0]
 
   return firstCharacter === "/" || firstCharacter === "@" ? firstCharacter : null
+}
+
+function normalizeSearchText(value: string, trigger: UiComposerCommandTrigger) {
+  const normalizedValue = value.trim().toLowerCase()
+
+  return normalizedValue.startsWith(trigger) ? normalizedValue.slice(1) : normalizedValue
 }
