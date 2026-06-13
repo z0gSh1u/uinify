@@ -123,6 +123,14 @@ describe("OpenAI-compatible chat example adapter", () => {
       body: { messages: [{ role: "user", content: [] }] },
     },
     {
+      name: "sparse messages array",
+      body: { messages: new Array(1) },
+    },
+    {
+      name: "sparse content array",
+      body: { messages: [{ role: "user", content: new Array(1) }] },
+    },
+    {
       name: "empty text part",
       body: {
         messages: [{ role: "user", content: [{ type: "text", text: "  " }] }],

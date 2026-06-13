@@ -201,6 +201,16 @@ export function isImageDataUrl(value: string): boolean {
   return /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+={0,2}$/i.test(value.trim())
 }
 
+function isDenseArray(array: readonly unknown[]): boolean {
+  for (let index = 0; index < array.length; index += 1) {
+    if (!(index in array)) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export function validateContentPart(part: unknown): part is OpenAICompatibleChatContentPart {
   if (!part || typeof part !== "object" || !("type" in part)) {
     return false
@@ -232,7 +242,12 @@ export function validateMessageContent(
     return true
   }
 
-  return Array.isArray(content) && content.length > 0 && content.every(validateContentPart)
+  return (
+    Array.isArray(content) &&
+    content.length > 0 &&
+    isDenseArray(content) &&
+    content.every(validateContentPart)
+  )
 }
 
 export function validateChatRequestBody(body: unknown): body is OpenAICompatibleChatRequest {
@@ -242,6 +257,7 @@ export function validateChatRequestBody(body: unknown): body is OpenAICompatible
 
   return (
     body.messages.length > 0 &&
+    isDenseArray(body.messages) &&
     body.messages.every((message): message is OpenAICompatibleChatMessage => {
       if (!message || typeof message !== "object") {
         return false
